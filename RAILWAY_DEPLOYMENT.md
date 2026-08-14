@@ -254,6 +254,22 @@ In Railway dashboard:
 3. After adding, run `cd backend && uv lock` to update lock file
 4. Commit both `pyproject.toml` and `uv.lock`, then push to GitHub
 
+#### InvalidRequestError: asyncio extension requires an async driver
+
+**Symptom**: Backend fails with `The asyncio extension requires an async driver to be used. The loaded 'psycopg2' is not async.`
+
+**Solutions**:
+1. Railway injects `DATABASE_URL` as `postgresql://...` (no driver specified)
+2. The app automatically converts this to `postgresql+asyncpg://...` via field validator
+3. Ensure `backend/app/utils/config.py` has the `convert_postgres_url_to_asyncpg` validator
+4. This conversion happens automatically — no manual configuration needed
+5. Alembic uses a separate `database_url_sync` property with `psycopg2` driver
+
+**Technical Details**:
+- Async SQLAlchemy operations require `asyncpg` driver
+- Alembic migrations require `psycopg2` (sync) driver
+- The app handles both automatically via URL conversion
+
 ## Manual Railway Dashboard Configuration
 
 If the automated scripts don't work, you can manually configure everything in the Railway dashboard:
