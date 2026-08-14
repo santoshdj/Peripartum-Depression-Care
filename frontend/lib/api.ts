@@ -93,7 +93,7 @@ export interface FhirMedication {
     text?: string;
     coding?: Array<{ code: string; display: string; system?: string }>;
   };
-  // EPIC typically returns a reference rather than an inline concept
+  // Some EHR providers return a reference rather than an inline concept
   medicationReference?: {
     reference?: string;
     display?: string;
@@ -121,6 +121,8 @@ export interface DiaryEntry {
   anxiety_score: number;    // 1–5
   note: string | null;
   created_at: string;
+  shared_to_fhir: boolean;
+  shared_at: string | null;
 }
 
 export interface DiaryEntryCreate {
@@ -164,6 +166,65 @@ export interface WeeklySummaryResponse {
   generated_at?: string;
   min_entries_required?: number;
   entries_so_far?: number;
+}
+
+export interface DiaryShareRequest {
+  entry_ids: string[];
+}
+
+export interface DiaryShareResponse {
+  message: string;
+  shared_count: number;
+  fhir_observation_ids: string[];
+}
+
+export interface CarePlanSuggestionsResponse {
+  suggestions: string[];
+  disclaimer: string;
+  epds_score: number | null;
+}
+
+export interface ForumPost {
+  id: string;
+  pseudonym: string;
+  post_content: string;
+  created_at: string;
+  reply_count: number;
+}
+
+export interface ForumReply {
+  id: string;
+  post_id: string;
+  pseudonym: string;
+  reply_content: string;
+  created_at: string;
+}
+
+export interface ForumPostDetail extends ForumPost {
+  replies: ForumReply[];
+}
+
+export interface ForumPostsResponse {
+  posts: ForumPost[];
+  total: number;
+  page: number;
+  limit: number;
+}
+
+export interface PseudonymResponse {
+  pseudonym: string | null;
+}
+
+export interface PseudonymSetRequest {
+  pseudonym: string;
+}
+
+export interface ForumPostCreate {
+  content: string;
+}
+
+export interface ForumReplyCreate {
+  content: string;
 }
 
 // ── API client ───────────────────────────────────────────────────────────────
@@ -237,6 +298,46 @@ export const api = {
     today: () => apiFetch<DiaryTodayResponse>("/api/diary/today"),
     streak: () => apiFetch<DiaryStreakResponse>("/api/diary/streak"),
     weeklySummary: () => apiFetch<WeeklySummaryResponse>("/api/diary/weekly-summary"),
+    share: (data: DiaryShareRequest) =>
+      apiFetch<DiaryShareResponse>("/api/diary/share", {
+        method: "POST",
+        body: JSON.stringify(data),
+      }),
+  },
+
+  carePlan: {
+    getSuggestions: () => apiFetch<CarePlanSuggestionsResponse>("/api/care-plan/suggestions"),
+  },
+
+  forum: {
+    getPseudonym: () => apiFetch<PseudonymResponse>("/api/forum/pseudonym"),
+    setPseudonym: (data: PseudonymSetRequest) =>
+      apiFetch<PseudonymResponse>("/api/forum/pseudonym", {
+        method: "POST",
+        body: JSON.stringify(data),
+      }),
+    listPosts: (page = 1, limit = 50) =>
+      apiFetch<ForumPostsResponse>(`/api/forum/posts?page=${page}&limit=${limit}`),
+    getPost: (postId: string) =>
+      apiFetch<ForumPostDetail>(`/api/forum/posts/${postId}`),
+    createPost: (data: ForumPostCreate) =>
+      apiFetch<ForumPost>("/api/forum/posts", {
+        method: "POST",
+        body: JSON.stringify(data),
+      }),
+    createReply: (postId: string, data: ForumReplyCreate) =>
+      apiFetch<ForumReply>(`/api/forum/posts/${postId}/replies`, {
+        method: "POST",
+        body: JSON.stringify(data),
+      }),
+    reportPost: (postId: string) =>
+      apiFetch<{ message: string }>(`/api/forum/posts/${postId}/report`, {
+        method: "POST",
+      }),
+    reportReply: (postId: string, replyId: string) =>
+      apiFetch<{ message: string }>(`/api/forum/posts/${postId}/replies/${replyId}/report`, {
+        method: "POST",
+      }),
   },
 
   profile: {

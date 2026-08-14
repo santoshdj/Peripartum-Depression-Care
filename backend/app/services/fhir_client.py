@@ -5,11 +5,14 @@ from app.utils.config import settings
 
 
 class FhirClient:
-    """Async FHIR R4 HTTP client scoped to a single patient session."""
+    """Async FHIR R4 HTTP client scoped to a single patient session.
+    
+    Compatible with any FHIR R4-compliant EHR (Epic, Cerner, Allscripts, etc.).
+    """
 
     def __init__(self, access_token: str) -> None:
         self._access_token = access_token
-        self._base_url = settings.EPIC_FHIR_BASE_URL.rstrip("/")
+        self._base_url = settings.FHIR_BASE_URL.rstrip("/")
 
     def _headers(self) -> dict:
         return {

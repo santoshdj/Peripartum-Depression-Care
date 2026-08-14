@@ -13,6 +13,7 @@ class AuthState(Base):
 
     state: Mapped[str] = mapped_column(String(256), primary_key=True)
     code_verifier: Mapped[str] = mapped_column(String(256))
+    provider: Mapped[str] = mapped_column(String(50), nullable=False, default="epic")
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         default=lambda: datetime.now(timezone.utc),

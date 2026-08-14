@@ -67,7 +67,7 @@ export default function ProfilePage() {
       <div>
         <h1 className="text-2xl font-semibold text-gray-900">My Profile</h1>
         <p className="text-gray-500 text-sm mt-1">
-          Your account details from the connected EPIC health record.
+          Your account details from the connected EHR health record.
         </p>
       </div>
 
@@ -129,7 +129,7 @@ export default function ProfilePage() {
               Session
             </h2>
             <Row label="Status" value="Active" />
-            <Row label="EPIC token" value={formatExpiry(profile.session_expires_at)} />
+            <Row label="EHR session" value={formatExpiry(profile.session_expires_at)} />
           </div>
 
           {/* Sign out */}

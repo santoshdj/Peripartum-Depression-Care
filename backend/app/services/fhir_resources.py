@@ -156,3 +156,116 @@ async def submit_epds(
     obs_id = obs_result.get("id", "")
 
     return qr_id, obs_id
+
+
+async def create_provider_alert_task(
+    client: FhirClient,
+    patient_id: str,
+    epds_score: int,
+    timestamp: str,
+) -> str:
+    """
+    Creates a FHIR Task resource to alert provider of elevated EPDS score.
+    
+    Task appears in provider's EPIC "In Basket" with status=requested, priority=urgent.
+    See CONTEXT.md: EPDS Risk Threshold
+    
+    Args:
+        client: Authenticated FHIR client
+        patient_id: FHIR Patient ID
+        epds_score: Total EPDS score (0-30)
+        timestamp: ISO 8601 timestamp of screening submission
+        
+    Returns:
+        Task resource ID from EPIC
+    """
+    patient_ref = f"Patient/{patient_id}"
+    
+    task_resource = {
+        "resourceType": "Task",
+        "status": "requested",
+        "intent": "order",
+        "priority": "urgent",
+        "code": {
+            "text": "Review peripartum depression screening"
+        },
+        "description": (
+            f"Patient EPDS score: {epds_score} (clinical threshold: 10). "
+            f"Submitted: {timestamp}. "
+            f"Follow up for peripartum depression assessment and treatment planning."
+        ),
+        "for": {"reference": patient_ref},
+        "authoredOn": timestamp,
+        # Note: Task.owner should reference PractitionerRole or Practitioner
+        # In MVP, we omit owner to let EPIC assign to patient's care team
+        # In production, fetch patient's primary care team and set Task.owner
+    }
+    
+    task_result = await client.post("Task", task_resource)
+    task_id = task_result.get("id", "")
+    
+    return task_id
+
+
+async def create_diary_observation(
+    client: FhirClient,
+    patient_id: str,
+    entry: dict,
+) -> str:
+    """
+    Writes a diary entry to FHIR as an Observation resource.
+    
+    Used for patient-controlled diary sharing (ADR 0005).
+    
+    Args:
+        client: Authenticated FHIR client
+        patient_id: FHIR Patient ID
+        entry: Dict with keys: mood_score, sleep_hours, anxiety_score, note, created_at
+        
+    Returns:
+        Observation resource ID from EPIC
+    """
+    patient_ref = f"Patient/{patient_id}"
+    
+    # Format diary data as structured string
+    value_string = (
+        f"Mood: {entry['mood_score']}/5 | "
+        f"Sleep: {entry['sleep_hours']} hours | "
+        f"Anxiety: {entry['anxiety_score']}/5"
+    )
+    if entry.get("note"):
+        value_string += f" | Note: {entry['note']}"
+    
+    observation_resource = {
+        "resourceType": "Observation",
+        "status": "final",
+        "category": [
+            {
+                "coding": [
+                    {
+                        "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+                        "code": "survey",
+                        "display": "Survey",
+                    }
+                ]
+            }
+        ],
+        "code": {
+            "coding": [
+                {
+                    "system": "http://loinc.org",
+                    "code": "LA28656-4",
+                    "display": "Daily mood and anxiety self-report",
+                }
+            ]
+        },
+        "subject": {"reference": patient_ref},
+        "effectiveDateTime": entry["created_at"],
+        "issued": datetime.now(timezone.utc).isoformat(),
+        "valueString": value_string,
+    }
+    
+    obs_result = await client.post("Observation", observation_resource)
+    obs_id = obs_result.get("id", "")
+    
+    return obs_id

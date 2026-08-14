@@ -42,20 +42,8 @@ const clinicalCards = [
   },
 ];
 
-const contactItems = [
-  {
-    label: "MyChart Patient Portal",
-    description: "Message your care team, request referrals, and view clinical notes",
-    href: "https://mychart.epic.com",
-    external: true,
-  },
-  {
-    label: "EPIC Health Records",
-    description: "Full access to your medical records and test results",
-    href: "https://www.epic.com/patients",
-    external: true,
-  },
-];
+// External links removed - provider-specific portals should be accessed
+// directly through your EHR provider's patient portal
 
 export default function MyCarePage() {
   return (
@@ -98,25 +86,10 @@ export default function MyCarePage() {
         <div className="bg-blue-50 border border-blue-100 rounded-xl p-4 space-y-4">
           <p className="text-sm text-blue-800">
             To send a secure message to your provider, request a prescription refill, or review
-            clinical notes, use the MyChart patient portal below.
+            clinical notes, use your EHR provider's patient portal (such as MyChart, Patient Portal, 
+            or FollowMyHealth depending on your healthcare system).
           </p>
-          <div className="space-y-2">
-            {contactItems.map(({ label, description, href }) => (
-              <a
-                key={href}
-                href={href}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-start gap-3 bg-white rounded-lg border border-blue-200 p-3 hover:border-blue-400 transition-colors"
-              >
-                <div className="flex-1">
-                  <p className="text-sm font-medium text-blue-700">{label} ↗</p>
-                  <p className="text-xs text-gray-500 mt-0.5">{description}</p>
-                </div>
-              </a>
-            ))}
-          </div>
-          <p className="text-xs text-gray-400">
+          <p className="text-xs text-gray-400 mt-4">
             If you are experiencing a mental health crisis, call{" "}
             <span className="font-semibold text-gray-600">1-833-943-5746</span> (National Maternal
             Mental Health Hotline) or{" "}

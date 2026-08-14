@@ -1,8 +1,11 @@
-# PRD — Peripartum Depression Care Platform
+# PRD — MathruMaitri
 
-**Date:** 2026-06-21  
+**Date:** 2026-06-21 (updated 2026-08-11)  
 **Status:** Ready for implementation  
 **Authors:** Product owner (via structured design interview)
+
+**Brand Name:** MathruMaitri (Sanskrit: मातृमैत्री — "Mother-Friendship")  
+**Internal Technical Name:** Peripartum Depression Care Platform
 
 ---
 
@@ -22,14 +25,15 @@ The result is that patients living through one of the highest-risk periods for d
 
 A patient-facing SMART on FHIR standalone web application that:
 
-- Authenticates the patient through their existing EPIC MyChart credentials (no new account required)
+- Authenticates the patient through their existing EHR patient portal credentials (MyChart, PowerChart, FollowMyHealth, etc. — no new account required)
+- Supports multiple FHIR R4-compliant EHR providers (Epic, Cerner, Allscripts, athenahealth, and more)
 - Surfaces their real clinical data — conditions, medications, appointments, labs, vitals, care plan — in plain language
-- Enables self-administered EPDS screening at any time, with results written directly back to their EPIC record
+- Enables self-administered EPDS screening at any time, with results written directly back to their EHR
 - Generates an AI-powered (Anthropic Claude) plain-language summary of their health context on every dashboard visit
 - Flags elevated EPDS scores (≥ 10) immediately with a prompt to contact their care team
 - Provides always-accessible crisis resources and psychoeducation, regardless of session state
 
-The app requires no new registration — EPIC credentials are the identity. Clinical data flows through the FHIR standard. Screening results are written back to EPIC, keeping the care team's record current.
+The app requires no new registration — EHR credentials are the identity. Clinical data flows through the FHIR standard. Screening results are written back to the patient's EHR, keeping the care team's record current.
 
 ---
 
@@ -37,12 +41,13 @@ The app requires no new registration — EPIC credentials are the identity. Clin
 
 ### Authentication & Onboarding
 
-1. As a postpartum patient, I want to launch the app from a link and log in with my EPIC MyChart credentials, so that I do not need to create a separate account.
-2. As a patient, I want the app to request only the minimum necessary permissions to my health data, so that I understand and trust what I am sharing.
-3. As a patient, I want to be automatically redirected to my dashboard after logging in, so that I can access my health information without additional steps.
-4. As a patient, I want my session to remain active across page refreshes during a single visit, so that I do not have to log in repeatedly.
-5. As a patient, I want to log out of the app securely, so that my health data is not accessible on a shared device.
-6. As a patient, I want to see a clear error message if my EPIC authentication fails, so that I know what to do next.
+1. As a postpartum patient, I want to launch the app from a link and log in with my EHR patient portal credentials, so that I do not need to create a separate account.
+2. As a patient, I want to select my EHR provider from a dropdown (Epic, Cerner, Allscripts, athenahealth, etc.) before signing in, so that the app can connect to the correct health system.
+3. As a patient, I want the app to request only the minimum necessary permissions to my health data, so that I understand and trust what I am sharing.
+4. As a patient, I want to be automatically redirected to my dashboard after logging in, so that I can access my health information without additional steps.
+5. As a patient, I want my session to remain active across page refreshes during a single visit, so that I do not have to log in repeatedly.
+6. As a patient, I want to log out of the app securely, so that my health data is not accessible on a shared device.
+7. As a patient, I want to see a clear error message if my EHR authentication fails, so that I know what to do next.
 
 ### Dashboard
 
@@ -59,7 +64,7 @@ The app requires no new registration — EPIC credentials are the identity. Clin
 14. As a patient, I want to complete the Edinburgh Postnatal Depression Scale questionnaire in the app at any time, so that I can screen myself between clinical appointments.
 15. As a patient, I want to see the 10 EPDS questions presented clearly one section at a time, so that the screening process does not feel overwhelming.
 16. As a patient, I want to see my total score immediately after completing the EPDS, so that I have immediate feedback.
-17. As a patient, I want my EPDS responses and score to be saved to my EPIC record automatically on submission, so that my care team can see my results without me calling the clinic.
+17. As a patient, I want my EPDS responses and score to be saved to my EHR automatically on submission, so that my care team can see my results without me calling the clinic.
 18. As a patient, I want to be shown the EPDS risk alert and care team contact instructions if my score is ≥ 10, so that I know to seek help.
 19. As a patient, I want to be shown a supportive, non-alarming message if my score is below the threshold, so that I feel supported regardless of my result.
 20. As a patient, I want to see crisis line information (National Maternal Mental Health Hotline) on the EPDS results screen, so that I always have access to immediate support.
@@ -98,6 +103,49 @@ The app requires no new registration — EPIC credentials are the identity. Clin
 38. As a patient, I want the summary to reflect my most up-to-date FHIR data (conditions, meds, appointments, latest EPDS score), so that it is clinically accurate.
 39. As a patient, I want the summary to make clear it is informational and not a medical diagnosis, so that I understand its purpose.
 40. As a patient, I want the summary to load quickly (within 3 seconds), so that it does not block me from using the rest of the dashboard.
+
+### My Diary (Self-Monitoring)
+
+41. As a patient, I want to submit a daily check-in with mood score (1-5), sleep hours (0-12), anxiety score (1-5), and an optional note, so that I can track my emotional health between appointments.
+42. As a patient, I want my diary entries to be private by default (visible only to me, not my care team), so that I can journal honestly without fear of judgment.
+43. As a patient, I want to see my diary entries displayed as a chronological list with a trend chart, so that I can visualize my mood patterns over time.
+44. As a patient, I want to receive AI-generated plain-language weekly patterns when I have ≥3 entries in the last 7 days, so that I can understand my symptom trends without manual analysis.
+45. As a patient, I want to see writing prompts (e.g., "Today I noticed...", "One thing I'm grateful for...") to reduce blank-page friction, so that I always have a starting point for my note.
+46. As a patient, I want to see my check-in streak (consecutive days journaling), so that I stay motivated to maintain the habit.
+47. As a patient, I want to complete a quick check-in from my dashboard without navigating to `/diary`, so that daily tracking feels frictionless.
+
+### Diary Sharing (Patient-Controlled)
+
+48. As a patient, I want to share specific diary entries with my care team by writing them to my EPIC record, so that my provider can see symptom trends when I choose to disclose them.
+49. As a patient, I want to select which entries to share (individual entries or date ranges), so that I maintain control over what my care team sees.
+50. As a patient, I want shared entries to display a "Shared with care team" badge in the UI, so that I always know which entries are visible to providers.
+51. As a patient, I want to share retroactively at any time (no time window restriction), so that I can decide to disclose past patterns during a provider visit.
+52. As a patient, I want to understand that shared entries become part of my permanent medical record and cannot be deleted, so that I can make informed consent decisions.
+
+### Mom Talk (Peer Support Forum)
+
+53. As a patient, I want to create a pseudonym (e.g., "MamaBear2024") on first use of Mom Talk, so that I can participate anonymously without revealing my real name.
+54. As a patient, I want to post discussion threads and reply to other patients' posts, so that I can share experiences and receive peer support.
+55. As a patient, I want to see one unified community feed (not cohort-matched by EPDS score), so that I can connect with the full range of peripartum experiences.
+56. As a patient, I want posts to be filtered by AI content moderation before publishing, so that harmful content (suicide/self-harm/violence keywords) is blocked and I am redirected to crisis resources.
+57. As a patient, I want a "Report" button on every post, so that I can flag inappropriate content for manual review.
+58. As a patient, I want to receive message notifications when someone replies to my thread, so that I stay engaged in conversations.
+59. As a patient, I want to see a clinical disclaimer ("Peer support is not professional care"), so that I understand Mom Talk's purpose and limitations.
+60. As a patient, I want Mom Talk to be accessible without logging in (read-only), so that I can browse before deciding to participate.
+
+### Provider Notifications
+
+61. As a patient, I want my care team to be automatically notified in my EHR when my EPDS score ≥ 10, so that they can follow up without me needing to call.
+62. As a patient, I want the notification to include my EPDS score and timestamp, so that my provider has context for urgency.
+63. As a patient, I want the notification to appear in my provider's EHR inbox as a Task, so that it surfaces in their existing workflow.
+
+### Care Plan Suggestions (AI)
+
+64. As a patient, I want to see 3-5 AI-generated actionable next steps when my EPDS score ≥ 10, so that I have concrete guidance while waiting to speak with my provider.
+65. As a patient, I want care plan suggestions to be based on my EPDS score, diary trends, and FHIR data (diagnoses, medications, appointments), so that recommendations are personalized to my situation.
+66. As a patient, I want suggestions to include examples like "Consider scheduling intake with perinatal therapist" or "Contact National Maternal Mental Health Hotline: 1-833-943-5746", so that I have specific actions to take.
+67. As a patient, I want suggestions to be clearly labeled "AI-generated suggestions · Not a treatment plan · Discuss with your care team", so that I understand they are informational and not medical advice.
+68. As a patient, I want care plan suggestions to not be written to my EPIC record, so that my official care plan remains authored exclusively by my provider.
 
 ### Security & Privacy
 

@@ -8,6 +8,7 @@ import RiskAlert from "@/components/RiskAlert";
 import GenderContextGate from "@/components/GenderContextGate";
 import { useGateContext } from "@/context/gate-context";
 import DailyCheckInCard from "@/components/DailyCheckInCard";
+import CarePlanSuggestions from "@/components/CarePlanSuggestions";
 
 export default function DashboardPage() {
   const [data, setData] = useState<DashboardResponse | null>(null);
@@ -58,9 +59,11 @@ export default function DashboardPage() {
   const navLinks = [
     { href: "/screening", label: "EPDS Screening" },
     { href: "/history", label: "Score History" },
+    { href: "/diary", label: "My Diary" },
+    { href: "/mom-talk", label: "Mom Talk" },
+    { href: "/care-plan", label: "Care Plan" },
     { href: "/labs", label: "Lab Results" },
     { href: "/vitals", label: "Vitals" },
-    { href: "/care-plan", label: "Care Plan" },
     { href: "/resources", label: "Resources" },
   ];
 
@@ -89,7 +92,10 @@ export default function DashboardPage() {
       {/* Risk alert */}
       {data.risk_alert && (
         <RiskAlert message={data.risk_alert.message} score={data.risk_alert.score} />
-      )}
+      )}Care plan suggestions (only shown if EPDS >= 10) */}
+      <CarePlanSuggestions />
+
+      {/* 
 
       {/* AI summary */}
       <NarrativeSummary summary={data.narrative_summary} />

@@ -11,6 +11,8 @@ from app.models.journal_entry import JournalEntry
 from app.models.session import Session
 from app.models.weekly_summary import WeeklySummary
 from app.services.diary_summary_service import generate_weekly_summary, _week_start
+from app.services.fhir_client import FhirClient
+from app.services.fhir_resources import create_diary_observation
 
 router = APIRouter(prefix="/api/diary", tags=["diary"])
 
@@ -22,6 +24,10 @@ class DiaryEntryCreate(BaseModel):
     note: str | None = Field(None, max_length=2000)
 
 
+class DiaryShareRequest(BaseModel):
+    entry_ids: list[str] = Field(..., min_length=1, max_length=50)
+
+
 class DiaryEntryResponse(BaseModel):
     id: str
     mood_score: int
@@ -29,6 +35,8 @@ class DiaryEntryResponse(BaseModel):
     anxiety_score: int
     note: str | None
     created_at: str
+    shared_to_fhir: bool = False
+    shared_at: str | None = None
 
 
 @router.get("/entries")
@@ -52,6 +60,8 @@ async def list_entries(
                 anxiety_score=e.anxiety_score,
                 note=e.note,
                 created_at=e.created_at.isoformat(),
+                shared_to_fhir=e.shared_to_fhir,
+                shared_at=e.shared_at.isoformat() if e.shared_at else None,
             )
             for e in entries
         ]
@@ -74,7 +84,8 @@ async def create_entry(
         created_at=datetime.now(timezone.utc),
     )
     db.add(entry)
-    await db.flush()
+    await db.commit()
+    await db.refresh(entry)
     return DiaryEntryResponse(
         id=entry.id,
         mood_score=entry.mood_score,
@@ -82,6 +93,8 @@ async def create_entry(
         anxiety_score=entry.anxiety_score,
         note=entry.note,
         created_at=entry.created_at.isoformat(),
+        shared_to_fhir=entry.shared_to_fhir,
+        shared_at=entry.shared_at.isoformat() if entry.shared_at else None,
     )
 
 
@@ -216,4 +229,80 @@ async def get_weekly_summary(
         "week_start": week_start.isoformat(),
         "entry_count": len(entries),
         "generated_at": datetime.now(timezone.utc).isoformat(),
+    }
+
+
+@router.post("/share")
+async def share_diary_entries(
+    payload: DiaryShareRequest,
+    current_session: Session = Depends(get_current_session),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Share selected diary entries with care team by writing to FHIR as Observations.
+    
+    Patient-controlled opt-in sharing (ADR 0005). Entries become part of permanent
+    medical record and cannot be deleted. Idempotent - already-shared entries are skipped.
+    """
+    patient_id = current_session.fhir_patient_id
+    
+    # Fetch requested entries (authorization check: ensure they belong to current patient)
+    result = await db.execute(
+        select(JournalEntry).where(
+            and_(
+                JournalEntry.id.in_(payload.entry_ids),
+                JournalEntry.patient_fhir_id == patient_id,
+            )
+        )
+    )
+    entries = result.scalars().all()
+    
+    if not entries:
+        raise HTTPException(status_code=404, detail="No valid entries found")
+    
+    # Filter out already-shared entries (idempotency)
+    entries_to_share = [e for e in entries if not e.shared_to_fhir]
+    
+    if not entries_to_share:
+        return {
+            "message": "All selected entries are already shared",
+            "shared_count": 0,
+            "fhir_observation_ids": [],
+        }
+    
+    # Write each entry to FHIR as Observation
+    client = FhirClient(current_session.fhir_access_token)
+    observation_ids = []
+    
+    for entry in entries_to_share:
+        try:
+            obs_id = await create_diary_observation(
+                client,
+                patient_id,
+                {
+                    "mood_score": entry.mood_score,
+                    "sleep_hours": entry.sleep_hours,
+                    "anxiety_score": entry.anxiety_score,
+                    "note": entry.note,
+                    "created_at": entry.created_at.isoformat(),
+                },
+            )
+            
+            # Update entry to mark as shared
+            entry.shared_to_fhir = True
+            entry.fhir_observation_id = obs_id
+            entry.shared_at = datetime.now(timezone.utc)
+            
+            observation_ids.append(obs_id)
+        
+        except Exception as e:
+            # Log error but continue processing other entries
+            print(f"Warning: Failed to share diary entry {entry.id}: {e}")
+    
+    await db.flush()
+    
+    return {
+        "message": f"Shared {len(observation_ids)} diary entries with your care team",
+        "shared_count": len(observation_ids),
+        "fhir_observation_ids": observation_ids,
     }

@@ -1,8 +1,14 @@
-# Peripartum Depression Care Platform
+# MathruMaitri
 
-A patient-facing **SMART on FHIR standalone app** for peripartum depression screening, monitoring, and care plan access — integrated with the EPIC FHIR sandbox.
+**Sanskrit:** मातृमैत्री (Mother-Friendship)
 
-Patients log in with their existing EPIC MyChart credentials, complete EPDS screenings that write back to their clinical record, view their health data in plain language, and receive an AI-generated health summary on every visit.
+A patient-facing **SMART on FHIR standalone app** for peripartum depression screening, monitoring, peer support, and care coordination — **compatible with any FHIR R4-compliant EHR** (Epic, Cerner, Allscripts, athenahealth, and more).
+
+Patients log in with their existing EHR credentials (MyChart, Patient Portal, etc.), complete validated EPDS screenings that write back to their clinical record, share diary entries with their care team, connect with other mothers anonymously, and receive AI-generated care plan guidance.
+
+_Formerly: Peripartum Depression Care Platform (internal technical name)_
+
+> **Multi-Provider Support:** Works with any FHIR R4-compliant EHR. See [docs/EHR_PROVIDER_SETUP.md](docs/EHR_PROVIDER_SETUP.md) for provider-specific configuration.
 
 ---
 
@@ -22,37 +28,36 @@ Patients log in with their existing EPIC MyChart credentials, complete EPDS scre
 │              FastAPI Backend (Python 3.12)               │
 │                                                          │
 │  SMART OAuth2 PKCE flow          EPDS risk scoring       │
-│  FHIR orchestration layer        Anthropic Claude        │
-│  Session management (Postgres)   narrative summary       │
+│  Multi-provider config           Anthropic Claude        │
+│  FHIR orchestration layer        narrative summary       │
+│  Session management (Postgres)                           │
 └────────────┬────────────────────────┬───────────────────┘
              │                        │
              ▼                        ▼
 ┌────────────────────┐    ┌──────────────────────────────┐
-│   Postgres DB       │    │   EPIC FHIR Sandbox           │
-│                    │    │   fhir.epic.com               │
+│   Postgres DB       │    │   EHR FHIR Server             │
+│                    │    │   (Epic, Cerner, etc.)        │
 │   sessions         │    │                              │
-│   epds_cache       │    │   Patient / Observation       │
-│   llm_audit_log    │    │   Condition / Medication      │
-└────────────────────┘    │   Appointment / CarePlan      │
-                          │   QuestionnaireResponse       │
-                          └──────────────────────────────┘
+│   auth_states      │    │   Patient / Observation       │
+│   epds_cache       │    │   Condition / Medication      │
+│   journal_entries  │    │   Appointment / CarePlan      │
+│   llm_audit_log    │    │   QuestionnaireResponse       │
+└────────────────────┘    └──────────────────────────────┘
 ```
 
 **Key principle:** The FHIR access token never reaches the browser. FastAPI owns the entire SMART OAuth2 PKCE flow and proxies all FHIR calls server-side.
-
----
 
 ## Features
 
 | Feature | Description |
 |---|---|
-| **SMART on FHIR login** | Standalone launch via EPIC MyChart — no separate account |
+| **SMART on FHIR login** | Standalone launch via patient portal — no separate account |
 | **AI Health Summary** | Anthropic Claude generates a plain-language dashboard summary on every visit |
 | **EPDS Screening** | Self-administer the Edinburgh Postnatal Depression Scale at any time |
-| **EPIC Write-Back** | EPDS responses and scores written back to the patient's EPIC record as FHIR resources |
+| **EHR Write-Back** | EPDS responses and scores written back to the patient's clinical record as FHIR resources |
 | **Risk Alerting** | Immediate flag + care team contact prompt when EPDS score ≥ 10 |
 | **Score History** | Interactive timeline chart of all past EPDS scores |
-| **Full FHIR Data** | Conditions, medications, appointments, labs, vitals, care plan — all from EPIC |
+| **Full FHIR Data** | Conditions, medications, appointments, labs, vitals, care plan — all from patient's EHR |
 | **Crisis Resources** | Always-accessible page with National Maternal Mental Health Hotline and coping resources |
 
 ---
@@ -66,7 +71,7 @@ Patients log in with their existing EPIC MyChart credentials, complete EPDS scre
 | Package manager | `uv` + `pyproject.toml` |
 | Database | Postgres 16 |
 | AI | Anthropic Claude (`claude-3-5-sonnet-20241022`) |
-| FHIR | EPIC FHIR R4 Sandbox (`fhir.epic.com`) — SMART on FHIR standalone |
+| FHIR | Any FHIR R4-compliant EHR — SMART on FHIR standalone |
 | Auth | SMART on FHIR OAuth2 PKCE, HttpOnly session cookies |
 | Dev infra | Docker Compose |
 | Cloud | Railway (backend + frontend + Postgres plugin) |
@@ -189,7 +194,8 @@ cp .env.example .env
 Edit `.env` and fill in:
 
 ```env
-EPIC_CLIENT_ID=<your EPIC sandbox client ID>
+# Multi-provider support: Configure your EHR providers in backend/app/utils/config.py
+# Default provider configurations included: Epic, Cerner, Allscripts, athenahealth
 REDIRECT_URI=http://localhost:8000/auth/callback
 ANTHROPIC_API_KEY=<your Anthropic API key>
 SESSION_SECRET_KEY=<32-byte random hex: python -c "import secrets; print(secrets.token_hex(32))">
@@ -214,9 +220,9 @@ docker compose exec backend uv run alembic upgrade head
 
 ### 4. Open the app
 
-Navigate to `http://localhost:3000`. Click **Sign in with EPIC** to begin the SMART on FHIR flow.
+Navigate to `http://localhost:3000`. Select your EHR provider from the dropdown and click **Sign in with EHR Provider** to begin the SMART on FHIR flow.
 
-> **EPIC Sandbox test patients:** Log in at `fhir.epic.com` → Developer Resources → Test Patients. Look for patients with `Condition` resources related to pregnancy or postpartum depression.
+> **Test Patients:** Most EHR sandboxes provide pre-populated test patients. For Epic, visit `fhir.epic.com` → Developer Resources → Test Patients. For Cerner, visit `code.cerner.com/developer/smart-on-fhir/apps`. Look for patients with pregnancy or postpartum-related conditions. See [docs/EHR_PROVIDER_SETUP.md](docs/EHR_PROVIDER_SETUP.md) for detailed setup instructions for each provider.
 
 ---
 
@@ -259,19 +265,22 @@ npm run test:e2e
 
 ```
 1. Patient visits http://localhost:3000
-2. Clicks "Sign in with EPIC"
-3. Frontend redirects to GET http://localhost:8000/auth/launch
-4. FastAPI builds PKCE challenge, stores state in Postgres
-5. FastAPI redirects patient to EPIC authorization URL
-6. Patient authenticates via EPIC MyChart
-7. EPIC redirects to GET http://localhost:8000/auth/callback?code=...&state=...
-8. FastAPI verifies state (CSRF), exchanges code for FHIR access token
-9. FastAPI stores session in Postgres, sets HttpOnly session UUID cookie
-10. FastAPI redirects to http://localhost:3000/dashboard
-11. Next.js calls GET /api/dashboard (session cookie sent automatically)
-12. FastAPI resolves session → FHIR token → fetches all FHIR resources
-13. FastAPI calls Anthropic Claude for narrative summary
-14. Dashboard renders with real patient data
+2. Selects EHR provider from dropdown (Epic, Cerner, Allscripts, athenahealth)
+3. Clicks "Sign in with EHR Provider"
+4. Frontend calls GET http://localhost:8000/auth/launch?provider=<selected>
+5. FastAPI retrieves provider-specific config (auth URLs, client ID, scopes)
+6. FastAPI builds PKCE challenge, stores state + provider in Postgres
+7. FastAPI redirects patient to provider's authorization URL
+8. Patient authenticates via their patient portal (MyChart, PowerChart, etc.)
+9. EHR redirects to GET http://localhost:8000/auth/callback?code=...&state=...
+10. FastAPI verifies state (CSRF), retrieves stored provider
+11. FastAPI exchanges code for FHIR access token using provider config
+12. FastAPI stores session in Postgres, sets HttpOnly session UUID cookie
+13. FastAPI redirects to http://localhost:3000/dashboard
+14. Next.js calls GET /api/dashboard (session cookie sent automatically)
+15. FastAPI resolves session → FHIR token → fetches all FHIR resources
+16. FastAPI calls Anthropic Claude for narrative summary
+17. Dashboard renders with real patient data
 ```
 
 ---
@@ -287,8 +296,9 @@ npm run test:e2e
 | `Appointment` | Read | `patient/Appointment.read` |
 | `QuestionnaireResponse` | Read + Write | `patient/QuestionnaireResponse.read patient/QuestionnaireResponse.write` |
 | `CarePlan` | Read | `patient/CarePlan.read` |
+| `Task` | Write | `patient/Task.write` |
 
-EPIC FHIR Base URL: `https://fhir.epic.com/interconnect-fhir-oauth/api/FHIR/R4`
+> **Note:** Task.write creates provider alerts when EPDS score ≥ 10. Verify your EHR supports Task resources. See [docs/EHR_PROVIDER_SETUP.md](docs/EHR_PROVIDER_SETUP.md) for provider-specific capabilities.
 
 ---
 
@@ -309,26 +319,67 @@ The Edinburgh Postnatal Depression Scale (EPDS) is a 10-item self-report questio
 
 | Variable | Required | Description |
 |---|---|---|
-| `EPIC_CLIENT_ID` | Yes | Your EPIC sandbox app client ID |
-| `EPIC_FHIR_BASE_URL` | Yes | EPIC FHIR R4 base URL |
-| `EPIC_AUTH_BASE_URL` | Yes | EPIC OAuth2 base URL |
-| `REDIRECT_URI` | Yes | OAuth2 callback URI (must match EPIC registration) |
+| `REDIRECT_URI` | Yes | OAuth2 callback URI (must match EHR provider registration) |
 | `ANTHROPIC_API_KEY` | Yes | Anthropic API key for narrative summary |
 | `ANTHROPIC_MODEL` | No | Defaults to `claude-3-5-sonnet-20241022` |
 | `DATABASE_URL` | Yes | Postgres async connection string |
 | `SESSION_SECRET_KEY` | Yes | 32-byte hex secret for session signing |
 | `COOKIE_SECURE` | No | Set `true` in production (HTTPS only) |
 
+**Multi-Provider Configuration:**  
+EHR provider configurations (client IDs, FHIR base URLs, auth endpoints, scopes) are managed in [backend/app/utils/config.py](backend/app/utils/config.py) in the `PROVIDER_CONFIGS` dictionary. Default configurations included for Epic, Cerner, Allscripts, and athenahealth.
+
 ---
 
 ## Railway Deployment
 
-1. Create a Railway project with two services: `backend` and `frontend`
-2. Add a **Postgres plugin** to the project (Railway injects `DATABASE_URL` automatically)
-3. Set all environment variables in each service's Railway config panel
-4. Set `REDIRECT_URI` to your Railway backend URL: `https://<backend>.railway.app/auth/callback`
-5. Register this Railway redirect URI in your EPIC app at `fhir.epic.com`
-6. Deploy via `railway up` or connect to your GitHub repo for auto-deploy
+**Full deployment guide**: See [RAILWAY_DEPLOYMENT.md](./RAILWAY_DEPLOYMENT.md) for step-by-step instructions.
+
+**Quick start** (using automated deployment scripts):
+
+1. **Prerequisites:**
+   ```bash
+   # Install Railway CLI
+   npm install -g @railway/cli
+   
+   # Login to Railway
+   railway login
+   ```
+
+2. **Set up backend environment:**
+   ```bash
+   cp backend/.env.example backend/.env
+   # Edit backend/.env with your Anthropic API key and session secret
+   ```
+
+3. **Run Phase 1 (create services + Postgres):**
+   ```bash
+   # Windows:
+   .\deploy-railway.ps1
+   
+   # Unix/macOS:
+   ./deploy-railway.sh
+   ```
+
+4. **Connect GitHub repo in Railway dashboard** for both backend and frontend services (set root directories: `backend` and `frontend`)
+
+5. **Get backend URL** from Railway dashboard after deployment completes
+
+6. **Run Phase 2 (link frontend to backend):**
+   ```bash
+   # Windows:
+   .\deploy-railway.ps1 -Phase2 -BackendUrl "https://your-backend.railway.app"
+   
+   # Unix/macOS:
+   ./deploy-railway.sh --phase2 --backend-url https://your-backend.railway.app
+   ```
+
+7. **Update EHR provider credentials:**
+   - Edit `backend/app/utils/config.py` → `PROVIDER_CONFIGS` with production client IDs
+   - Register Railway redirect URI (`https://your-backend.railway.app/auth/callback`) with each EHR provider
+   - See [docs/EHR_PROVIDER_SETUP.md](docs/EHR_PROVIDER_SETUP.md) for provider registration instructions
+
+**Manual setup**: If automated scripts fail, see the "Manual Railway Dashboard Configuration" section in [RAILWAY_DEPLOYMENT.md](./RAILWAY_DEPLOYMENT.md).
 
 ---
 

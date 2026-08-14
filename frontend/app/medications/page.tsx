@@ -5,7 +5,7 @@ import { api, type FhirMedication } from "@/lib/api";
 import BackButton from "@/components/BackButton";
 
 function getMedName(med: FhirMedication): string {
-  // EPIC returns medicationReference.display; fall back to inline concept
+  // Some EHR providers return medicationReference.display; fall back to inline concept
   return (
     med.medicationReference?.display ||
     med.medicationCodeableConcept?.text ||

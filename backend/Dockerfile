@@ -1,19 +1,18 @@
 FROM python:3.12-slim
 
+# Install uv (from official image)
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /usr/local/bin/
+
 WORKDIR /app
 
-# Install uv
-COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
+# Install dependencies (cached layer — only invalidated when lock file changes)
+COPY pyproject.toml uv.lock ./
+RUN uv sync --frozen --no-dev
 
-# Copy dependency files first for layer caching
-COPY pyproject.toml ./
-
-# Install dependencies (no dev group)
-RUN uv sync --no-dev
-
-# Copy source
+# Copy application code
 COPY . .
 
 EXPOSE 8000
 
-CMD ["uv", "run", "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+# Railway injects $PORT at runtime; fall back to 8000 for local dev
+CMD ["sh", "-c", "uv run alembic upgrade head && uv run uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}"]

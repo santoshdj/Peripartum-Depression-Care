@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { api, type DiaryEntry, type DiaryEntryCreate, type WeeklySummaryResponse } from "@/lib/api";
 import BackButton from "@/components/BackButton";
+import DiaryShareButton from "@/components/DiaryShareButton";
 
 // ── Label helpers ─────────────────────────────────────────────────────────────
 
@@ -351,6 +352,12 @@ export default function DiaryPage() {
             >
               <div className="flex items-center justify-between">
                 <p className="text-xs text-gray-400">{formatDate(entry.created_at)}</p>
+                {entry.shared_to_fhir && (
+                  <div className="flex items-center gap-1 text-green-600 text-xs">
+                    <span>✓</span>
+                    <span>Shared with care team</span>
+                  </div>
+                )}
               </div>
               <div className="flex gap-4 flex-wrap text-sm">
                 <span>

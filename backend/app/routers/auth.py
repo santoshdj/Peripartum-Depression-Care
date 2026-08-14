@@ -8,15 +8,23 @@ from app.database import get_db
 from app.middleware.session import get_current_session
 from app.models.session import Session
 from app.services.smart_auth import build_auth_url, exchange_code_for_token
-from app.utils.config import settings
+from app.utils.config import settings, get_provider_config
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
 
 @router.get("/launch")
-async def launch(db: AsyncSession = Depends(get_db)):
-    """Initiates the SMART on FHIR standalone authorization flow."""
-    auth_url = await build_auth_url(db)
+async def launch(
+    provider: str = Query("epic", description="EHR provider (epic, cerner, allscripts, athenahealth)"),
+    db: AsyncSession = Depends(get_db)
+):
+    """Initiates the SMART on FHIR standalone authorization flow for the selected provider."""
+    try:
+        provider_config = get_provider_config(provider)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    
+    auth_url = await build_auth_url(db, provider_config)
     return RedirectResponse(url=auth_url)
 
 
@@ -26,7 +34,7 @@ async def callback(
     state: str = Query(...),
     db: AsyncSession = Depends(get_db),
 ):
-    """Handles the EPIC OAuth2 redirect, creates a session, sets HttpOnly cookie."""
+    """Handles the OAuth2 redirect from the EHR, creates a session, sets HttpOnly cookie."""
     try:
         token_response = await exchange_code_for_token(code, state, db)
     except ValueError as exc:
@@ -41,7 +49,7 @@ async def callback(
     )
 
     if not patient_id or not access_token:
-        raise HTTPException(status_code=502, detail="Incomplete token response from EPIC")
+        raise HTTPException(status_code=502, detail="Incomplete token response from EHR")
 
     expires_at = datetime.now(timezone.utc) + timedelta(seconds=expires_in)
     session = Session(

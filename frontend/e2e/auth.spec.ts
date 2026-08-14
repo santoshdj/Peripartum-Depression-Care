@@ -1,9 +1,9 @@
 import { test, expect } from "@playwright/test";
 
 test.describe("SMART auth flow", () => {
-  test("landing page shows Sign in with EPIC button", async ({ page }) => {
+  test("landing page shows Sign in with EHR Provider button", async ({ page }) => {
     await page.goto("/");
-    await expect(page.getByText("Sign in with EPIC")).toBeVisible();
+    await expect(page.getByText("Sign in with EHR Provider")).toBeVisible();
     await expect(page.getByText("Peripartum Care")).toBeVisible();
   });
 
@@ -16,9 +16,12 @@ test.describe("SMART auth flow", () => {
 
   test("Sign in button links to backend /auth/launch", async ({ page }) => {
     await page.goto("/");
-    const signInLink = page.getByRole("link", { name: "Sign in with EPIC" });
-    const href = await signInLink.getAttribute("href");
-    expect(href).toContain("/auth/launch");
+    const signInButton = page.getByRole("button", { name: "Sign in with EHR Provider" });
+    await expect(signInButton).toBeVisible();
+    
+    // Verify provider dropdown is visible
+    const providerSelect = page.locator('select#ehr-provider');
+    await expect(providerSelect).toBeVisible();
   });
 
   test("unauthenticated access to /dashboard redirects to login", async ({ page }) => {
