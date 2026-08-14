@@ -244,6 +244,16 @@ In Railway dashboard:
 3. If missing, generate locally: `cd backend && uv sync` then commit the file
 4. Verify file exists in your GitHub repo under `backend/uv.lock`
 
+#### ModuleNotFoundError: No module named 'psycopg2'
+
+**Symptom**: Backend deployment fails during migrations with `ModuleNotFoundError: No module named 'psycopg2'`
+
+**Solutions**:
+1. Ensure `psycopg2-binary` is in `backend/pyproject.toml` dependencies
+2. Both `asyncpg` (for async SQLAlchemy) and `psycopg2-binary` (for Alembic migrations) are required
+3. After adding, run `cd backend && uv lock` to update lock file
+4. Commit both `pyproject.toml` and `uv.lock`, then push to GitHub
+
 ## Manual Railway Dashboard Configuration
 
 If the automated scripts don't work, you can manually configure everything in the Railway dashboard:
