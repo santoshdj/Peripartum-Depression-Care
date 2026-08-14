@@ -234,6 +234,16 @@ In Railway dashboard:
 2. Must use HTTPS in production (Railway provides this automatically)
 3. Check that the EHR provider app registration includes the Railway callback URL
 
+#### Docker Build Error: uv.lock Not Found
+
+**Symptom**: Backend deployment fails with error: `"/uv.lock": not found`
+
+**Solutions**:
+1. Ensure `backend/uv.lock` is committed to the repository (not in .gitignore)
+2. Lock files should be committed for reproducible production builds
+3. If missing, generate locally: `cd backend && uv sync` then commit the file
+4. Verify file exists in your GitHub repo under `backend/uv.lock`
+
 ## Manual Railway Dashboard Configuration
 
 If the automated scripts don't work, you can manually configure everything in the Railway dashboard:
