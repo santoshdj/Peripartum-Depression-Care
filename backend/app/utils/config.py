@@ -106,6 +106,17 @@ class Settings(BaseSettings):
     # CORS
     ALLOWED_ORIGINS: list[str] = ["http://localhost:3000"]
 
+    @field_validator("DATABASE_URL", mode="before")
+    @classmethod
+    def convert_postgres_url_to_asyncpg(cls, v: str | None) -> str:
+        """
+        Convert Railway's postgresql:// URL to postgresql+asyncpg:// for async SQLAlchemy.
+        Railway injects DATABASE_URL as postgresql://, but we need asyncpg driver.
+        """
+        if isinstance(v, str) and v.startswith("postgresql://"):
+            return v.replace("postgresql://", "postgresql+asyncpg://", 1)
+        return v or "postgresql+asyncpg://postgres:postgres@postgres:5432/peripartum_db"
+
     @field_validator("FHIR_CLIENT_SECRET", "FHIR_ISS", mode="before")
     @classmethod
     def empty_str_to_none(cls, v: str | None) -> str | None:
@@ -113,6 +124,14 @@ class Settings(BaseSettings):
         if isinstance(v, str) and not v.strip():
             return None
         return v
+
+    @property
+    def database_url_sync(self) -> str:
+        """
+        Sync version of DATABASE_URL for Alembic migrations.
+        Converts postgresql+asyncpg:// to postgresql+psycopg2://
+        """
+        return self.DATABASE_URL.replace("postgresql+asyncpg://", "postgresql+psycopg2://", 1)
 
 
 settings = Settings()
