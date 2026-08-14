@@ -29,8 +29,7 @@ build/
 venv/
 *.egg
 
-# uv
-uv.lock
+# uv - Note: uv.lock should be committed for reproducible production builds
 
 # Node / Next.js
 node_modules/
