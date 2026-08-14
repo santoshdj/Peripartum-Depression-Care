@@ -110,11 +110,15 @@ class Settings(BaseSettings):
     @classmethod
     def convert_postgres_url_to_asyncpg(cls, v: str | None) -> str:
         """
-        Convert Railway's postgresql:// URL to postgresql+asyncpg:// for async SQLAlchemy.
-        Railway injects DATABASE_URL as postgresql://, but we need asyncpg driver.
+        Convert Railway's postgres:// or postgresql:// URL to postgresql+asyncpg:// for async SQLAlchemy.
+        Railway injects DATABASE_URL as postgres:// (legacy) or postgresql://, but we need asyncpg driver.
         """
-        if isinstance(v, str) and v.startswith("postgresql://"):
-            return v.replace("postgresql://", "postgresql+asyncpg://", 1)
+        if isinstance(v, str):
+            # Handle both postgres:// and postgresql:// (Railway can inject either)
+            if v.startswith("postgres://"):
+                return v.replace("postgres://", "postgresql+asyncpg://", 1)
+            elif v.startswith("postgresql://"):
+                return v.replace("postgresql://", "postgresql+asyncpg://", 1)
         return v or "postgresql+asyncpg://postgres:postgres@postgres:5432/peripartum_db"
 
     @field_validator("FHIR_CLIENT_SECRET", "FHIR_ISS", mode="before")
