@@ -1,4 +1,6 @@
 import asyncio
+import logging
+import re
 from logging.config import fileConfig
 
 from alembic import context
@@ -11,11 +13,24 @@ from app.database import Base
 from app.models import AuthState, Session, EpdsCache, LlmAuditLog  # noqa: F401
 from app.utils.config import settings
 
+logger = logging.getLogger('alembic.env')
+
+
+def mask_db_password(url: str) -> str:
+    """Mask password in database URL for safe logging."""
+    return re.sub(r'(:)([^@:]+)(@)', r'\1****\3', url)
+
+
 config = context.config
 
 # Override the ini URL with the asyncpg version for async migrations
 # Alembic runs async migrations, so it needs the asyncpg driver (not psycopg2)
+logger.info("=== Alembic Migration Configuration ===")
+logger.info(f"DATABASE_URL (masked): {mask_db_password(settings.DATABASE_URL)}")
+logger.info(f"Driver: {settings.DATABASE_URL.split('://')[0] if '://' in settings.DATABASE_URL else 'unknown'}")
+
 config.set_main_option("sqlalchemy.url", settings.DATABASE_URL)
+logger.info("✓ Alembic configured with async engine")
 
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)

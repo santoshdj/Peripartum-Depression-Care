@@ -23,15 +23,48 @@ logger = logging.getLogger(__name__)
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     logger.info("=== Application starting ===")
+    
+    # Database connection info
+    from app.database import mask_db_password
+    logger.info("=== Database Info ===")
+    logger.info(f"DATABASE_URL (masked): {mask_db_password(settings.DATABASE_URL)}")
+    try:
+        # Parse connection details from URL
+        # Format: postgresql+asyncpg://user:password@host:port/database
+        if '://' in settings.DATABASE_URL:
+            parts = settings.DATABASE_URL.split('://', 1)
+            driver = parts[0]
+            remaining = parts[1]
+            if '@' in remaining:
+                creds, location = remaining.split('@', 1)
+                user = creds.split(':')[0] if ':' in creds else creds
+                if '/' in location:
+                    host_port, database = location.rsplit('/', 1)
+                    host = host_port.split(':')[0] if ':' in host_port else host_port
+                    port = host_port.split(':')[1] if ':' in host_port else '5432'
+                    
+                    logger.info(f"  Driver: {driver}")
+                    logger.info(f"  Host: {host}")
+                    logger.info(f"  Port: {port}")
+                    logger.info(f"  Database: {database}")
+                    logger.info(f"  User: {user}")
+    except Exception as e:
+        logger.warning(f"Could not parse DATABASE_URL: {e}")
+    
+    # FHIR configuration
+    logger.info("=== FHIR Configuration ===")
     logger.info(f"FHIR Base URL: {settings.FHIR_BASE_URL}")
     logger.info(f"FHIR Client ID: {settings.FHIR_CLIENT_ID}")
     logger.info(f"FHIR Client Secret: {'[SET]' if settings.FHIR_CLIENT_SECRET else '[NOT SET - using PKCE]'}")
     logger.info(f"FHIR Client Secret value repr: {repr(settings.FHIR_CLIENT_SECRET)}")
+    
     # Database schema managed by Alembic migrations (see backend/alembic/versions/)
     # Dockerfile runs: alembic upgrade head
     logger.info("=== Application ready ===")
     yield
+    logger.info("=== Application shutting down ===")
     await engine.dispose()
+    logger.info("✓ Database engine disposed")
 
 
 app = FastAPI(
