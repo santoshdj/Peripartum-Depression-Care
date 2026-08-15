@@ -1,7 +1,8 @@
 FROM python:3.12-slim
 
-# Install uv (from official image)
+# Install uv (from official image) and postgresql-client for advisory locks
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /usr/local/bin/
+RUN apt-get update && apt-get install -y postgresql-client && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
@@ -14,5 +15,7 @@ COPY . .
 
 EXPOSE 8000
 
-# Railway injects $PORT at runtime; fall back to 8000 for local dev
-CMD ["sh", "-c", "uv run alembic upgrade head && uv run uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}"]
+# Use PostgreSQL advisory lock to prevent race conditions when multiple containers start simultaneously
+# Advisory lock ensures only one container runs migrations at a time
+CMD ["sh", "-c", "psql $DATABASE_URL -c 'SELECT pg_advisory_lock(123456789);' && uv run alembic upgrade head; MIGRATION_EXIT=$?; psql $DATABASE_URL -c 'SELECT pg_advisory_unlock(123456789);'; if [ $MIGRATION_EXIT -ne 0 ]; then exit $MIGRATION_EXIT; fi && uv run uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}"]
+

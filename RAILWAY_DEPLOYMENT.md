@@ -334,49 +334,35 @@ If `DATABASE_URL` is empty or missing, the Postgres and backend services are not
 
 **Symptom**: Alembic fails with `type "moderation_status_enum" already exists` or similar enum/type duplicate errors.
 
-**Root Cause**: Fixed in commit cf3a3c7. The migration used `checkfirst=True` with SQLAlchemy's `.create()` method, but this doesn't work reliably in async migration contexts with asyncpg.
+**Root Cause**: Railway runs multiple backend containers simultaneously on deployment. Each container tries to run `alembic upgrade head` at the same time, causing a **race condition** where multiple containers attempt to create the same enum type.
 
-**Solution**: The bug is now fixed. The migration now uses PostgreSQL's native `CREATE TYPE ... IF NOT EXISTS` syntax via raw SQL, which works correctly in async contexts.
+**Solution 1: Scale Down to 1 Replica During Migration** (Recommended)
 
-If you still get this error after the fix:
+1. **Railway Dashboard** → **backend service** → **Settings** → **Deploy**
+2. Set **Replicas** to `1` (temporarily)
+3. **Redeploy** the backend
+4. After successful deployment, scale back up if needed
 
-1. **Pull latest code**:
-   ```bash
-   git pull origin master
-   ```
+**Solution 2: Use PostgreSQL Advisory Lock**
 
-2. **Railway will auto-redeploy**. If needed, manually redeploy in Railway dashboard.
+Add this to the **start of** `backend/Dockerfile` CMD:
 
-3. **If error persists**, reset the database:
-   ```bash
-   railway link
-   railway run --service postgres psql $DATABASE_URL
-   # In psql, drop EVERYTHING (schema, types, extensions):
-   DROP SCHEMA public CASCADE;
-   DROP TYPE IF EXISTS moderation_status_enum CASCADE;
-   CREATE SCHEMA public;
-   GRANT ALL ON SCHEMA public TO PUBLIC;
-   \q
-   
-   railway run --service backend alembic stamp base
-   # Redeploy backend in Railway dashboard
-   ```
-
-**Alternative: Complete Database Wipe** (if above doesn't work):
-```bash
-railway link
-# List all custom types first
-railway run --service postgres psql $DATABASE_URL -c "\dT"
-
-# Drop the entire database and recreate (CAUTION: deletes everything)
-railway run --service postgres psql -c "SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = current_database() AND pid <> pg_backend_pid();"
-railway run --service postgres psql -c "DROP DATABASE IF EXISTS railway;"
-railway run --service postgres psql -c "CREATE DATABASE railway;"
-
-# Redeploy backend in Railway dashboard
+```dockerfile
+CMD ["sh", "-c", "psql $DATABASE_URL -c 'SELECT pg_advisory_lock(123456789);' && uv run alembic upgrade head && psql $DATABASE_URL -c 'SELECT pg_advisory_unlock(123456789);' && uv run uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}"]
 ```
 
-**Technical Details**: In async migrations wrapped by `connection.run_sync()`, the `checkfirst` parameter on enum `.create()` doesn't reliably check for existing types with asyncpg. The fix uses PostgreSQL's `DO $$ ... EXCEPTION WHEN duplicate_object` pattern which works correctly in all contexts.
+This ensures only **one container at a time** can run migrations.
+
+**Solution 3: Manual Database Reset** (if migration is stuck)
+
+```bash
+railway link
+railway run --service postgres psql $DATABASE_URL -c "DROP TYPE IF EXISTS moderation_status_enum CASCADE;"
+```
+
+Then **redeploy backend** in Railway dashboard.
+
+**Technical Details**: The migration uses PostgreSQL's `DO $$ ... EXCEPTION WHEN duplicate_object` pattern, but there's still a narrow race window when multiple containers check simultaneously. Advisory locks or single-replica deployments prevent this race condition.
 
 #### Authentication Redirect Errors
 
