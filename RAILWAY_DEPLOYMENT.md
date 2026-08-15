@@ -258,18 +258,20 @@ In Railway dashboard:
 
 **Symptom**: Backend fails with `The asyncio extension requires an async driver to be used. The loaded 'psycopg2' is not async.`
 
-**Solutions**:
+**Root Cause**: This error occurred during Alembic migrations when the migration setup tried to use a sync driver (psycopg2) with an async engine.
+
+**Solution (Already Fixed)**:
 1. Railway injects `DATABASE_URL` as `postgres://...` or `postgresql://...` (no driver specified)
 2. The app automatically converts both to `postgresql+asyncpg://...` via field validator
-3. Ensure `backend/app/utils/config.py` has the `convert_postgres_url_to_asyncpg` validator
-4. This conversion happens automatically — no manual configuration needed
-5. Alembic uses a separate `database_url_sync` property with `psycopg2` driver
+3. Alembic now uses the same asyncpg URL for async migrations
+4. Both app and migrations use asyncpg consistently - no driver mismatch
 
 **Technical Details**:
-- Async SQLAlchemy operations require `asyncpg` driver
-- Alembic migrations require `psycopg2` (sync) driver
+- The app uses async SQLAlchemy with `asyncpg` driver throughout
+- Alembic runs async migrations using the same `asyncpg` driver
 - Railway can inject either `postgres://` (legacy) or `postgresql://` URLs
 - The app handles all URL formats automatically via URL conversion
+- psycopg2-binary is installed but only used as a fallback if needed
 
 ## Manual Railway Dashboard Configuration
 
