@@ -15,9 +15,16 @@ depends_on = None
 
 
 def upgrade() -> None:
-    # Create the enum type once (checkfirst to handle if it already exists)
-    moderation_status_enum = sa.Enum("pending", "approved", "rejected", "flagged", name="moderation_status_enum")
-    moderation_status_enum.create(op.get_bind(), checkfirst=True)
+    # Create the enum type if it doesn't exist (using raw SQL for async compatibility)
+    op.execute("""
+        DO $$ BEGIN
+            CREATE TYPE moderation_status_enum AS ENUM ('pending', 'approved', 'rejected', 'flagged');
+        EXCEPTION
+            WHEN duplicate_object THEN null;
+        END $$;
+    """)
+    
+    moderation_status_enum = sa.Enum("pending", "approved", "rejected", "flagged", name="moderation_status_enum", create_type=False)
     
     # Create forum_posts table
     op.create_table(
@@ -60,8 +67,8 @@ def upgrade() -> None:
 
 def downgrade() -> None:
     op.drop_index("ix_forum_replies_created_at", table_name="forum_replies")
-    op.drop_index("ix_forum_replies_post_id", table_name="forum_replies")
-    op.drop_table("forum_replies")
+    op.drop_index("ixif no other tables use it
+    op.execute("DROP TYPE IF EXISTS moderation_status_enum"
 
     op.drop_index("ix_forum_posts_patient_fhir_id", table_name="forum_posts")
     op.drop_index("ix_forum_posts_created_at", table_name="forum_posts")
