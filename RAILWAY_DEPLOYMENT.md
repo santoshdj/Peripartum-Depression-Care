@@ -225,6 +225,33 @@ In Railway dashboard:
    railway run --service backend alembic upgrade head
    ```
 
+#### DuplicateTableError: relation already exists
+
+**Symptom**: Alembic fails with `relation "ix_epds_cache_fhir_patient_id" already exists` or similar duplicate errors during migrations.
+
+**Root Cause**: The app previously used `Base.metadata.create_all()` which created tables without Alembic tracking. When Alembic migrations run, they try to create tables that already exist.
+
+**Solution (Choose One)**:
+
+**Option 1: Fresh Database (Recommended for new deployments)**
+1. In Railway dashboard → Postgres service → **Settings** → **Delete Service**
+2. Create a new Postgres service: Click "+ New" → "Database" → "Add PostgreSQL"
+3. Redeploy the backend service (migrations will run on fresh database)
+
+**Option 2: Fix Existing Database**
+1. Connect to Railway database via CLI:
+   ```bash
+   railway link
+   railway run --service postgres psql $DATABASE_URL
+   ```
+2. Mark all migrations as applied without running them:
+   ```bash
+   railway run --service backend alembic stamp head
+   ```
+3. Redeploy backend service
+
+**Prevention**: The app now uses Alembic exclusively (no `create_all()` calls in production).
+
 #### Authentication Redirect Errors
 
 **Symptom**: EHR authentication fails with redirect URI mismatch.
