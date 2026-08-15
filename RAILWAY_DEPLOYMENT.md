@@ -229,60 +229,35 @@ In Railway dashboard:
 
 **Symptom**: Alembic fails with `relation "ix_epds_cache_fhir_patient_id" already exists` or similar duplicate errors during migrations.
 
-**Root Cause**: The app previously used `Base.metadata.create_all()` which created tables without Alembic tracking. When Alembic migrations run, they try to create tables that already exist.
+**Root Cause**: Fixed in commit 4b42818. The migration file had `index=True` in the column definition AND an explicit `op.create_index()` call, causing the index to be created twice in a single migration run.
 
-**Solutions (Try in order)**:
+**Solution**: The bug is now fixed. If you still get this error:
 
-**Step 1: Verify New Postgres Service**
+1. **Verify you have the latest code**:
+   ```bash
+   git pull origin master
+   ```
+   Check that commit 4b42818 or later is present.
 
-If you deleted and recreated Postgres but still get the error:
+2. **Railway should auto-redeploy** with the fix. If not, manually trigger a redeploy:
+   - Railway dashboard → backend service → **Deployments** → **Redeploy**
 
-1. Railway dashboard → Postgres service → **Info** tab
-2. Check **Created** date - should be recent (today)
-3. If date is old, the service wasn't actually deleted - try deleting again
-4. After creating new Postgres, verify backend's `DATABASE_URL` updated:
-   - Backend service → **Variables** → check `DATABASE_URL` value
-   - Should match the new Postgres connection string
+3. **If error persists**, the database may have partial state. Reset it:
+   ```bash
+   railway link
+   railway run --service postgres psql $DATABASE_URL
+   # In psql:
+   DROP SCHEMA public CASCADE;
+   CREATE SCHEMA public;
+   \q
+   
+   # Reset Alembic tracking:
+   railway run --service backend alembic stamp base
+   
+   # Redeploy backend in Railway dashboard
+   ```
 
-**Step 2: Manual Database Reset (Most Reliable)**
-
-If Step 1 doesn't help, manually clean the database:
-
-```bash
-# Link to your Railway project
-railway link
-
-# Connect to Postgres and drop all tables
-railway run --service postgres psql $DATABASE_URL
-
-# In psql prompt:
-DROP SCHEMA public CASCADE;
-CREATE SCHEMA public;
-\q
-
-# Mark migrations as ready to run
-railway run --service backend alembic stamp base
-
-# Trigger backend redeploy
-# Go to Railway dashboard → backend service → click "Redeploy"
-```
-
-**Step 3: Fix Without Dropping Tables**
-
-If you can't drop tables (have production data):
-
-```bash
-# Link to your Railway project
-railway link
-
-# Mark all migrations as already applied (skip running them)
-railway run --service backend alembic stamp head
-
-# Trigger backend redeploy
-# Go to Railway dashboard → backend service → click "Redeploy"
-```
-
-**Prevention**: The app now uses Alembic exclusively (no `create_all()` calls in production).
+**Technical Details**: The original migration had both `sa.Column("fhir_patient_id", ..., index=True)` (auto-creates index) and `op.create_index("ix_epds_cache_fhir_patient_id", ...)` (explicit index creation), causing a duplicate. The fix removes `index=True` from the column definition since we use explicit index creation.
 
 #### Authentication Redirect Errors
 
