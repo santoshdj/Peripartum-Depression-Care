@@ -27,9 +27,8 @@ async def lifespan(app: FastAPI):
     logger.info(f"FHIR Client ID: {settings.FHIR_CLIENT_ID}")
     logger.info(f"FHIR Client Secret: {'[SET]' if settings.FHIR_CLIENT_SECRET else '[NOT SET - using PKCE]'}")
     logger.info(f"FHIR Client Secret value repr: {repr(settings.FHIR_CLIENT_SECRET)}")
-    # Create tables on startup (dev convenience — use alembic in production)
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
+    # Database schema managed by Alembic migrations (see backend/alembic/versions/)
+    # Dockerfile runs: alembic upgrade head
     logger.info("=== Application ready ===")
     yield
     await engine.dispose()
