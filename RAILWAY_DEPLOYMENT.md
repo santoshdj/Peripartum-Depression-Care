@@ -187,6 +187,32 @@ PROVIDER_CONFIGS = {
 In Railway dashboard:
 - Click on a service → **Deployments** → Click on active deployment → **View Logs**
 
+**Database Connection Logs**: The backend now logs detailed database connection info on startup:
+```
+=== Database Configuration ===
+DATABASE_URL (masked): postgresql+asyncpg://postgres:****@postgres.railway.internal:5432/railway
+Driver: postgresql+asyncpg
+✓ AsyncEngine created successfully
+
+=== Database Info ===
+DATABASE_URL (masked): postgresql+asyncpg://postgres:****@postgres.railway.internal:5432/railway
+  Driver: postgresql+asyncpg
+  Host: postgres.railway.internal
+  Port: 5432
+  Database: railway
+  User: postgres
+```
+
+**Alembic Migration Logs**: Migrations also log the database configuration:
+```
+=== Alembic Migration Configuration ===
+DATABASE_URL (masked): postgresql+asyncpg://postgres:****@postgres.railway.internal:5432/railway
+Driver: postgresql+asyncpg
+✓ Alembic configured with async engine
+```
+
+**Security**: All DATABASE_URL logs automatically mask the password with `****`.
+
 ### Check Health Endpoints
 
 - Backend: `https://your-backend.railway.app/health`
