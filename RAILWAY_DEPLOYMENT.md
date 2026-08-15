@@ -280,14 +280,30 @@ If you still get this error after the fix:
    ```bash
    railway link
    railway run --service postgres psql $DATABASE_URL
-   # In psql:
+   # In psql, drop EVERYTHING (schema, types, extensions):
    DROP SCHEMA public CASCADE;
+   DROP TYPE IF EXISTS moderation_status_enum CASCADE;
    CREATE SCHEMA public;
+   GRANT ALL ON SCHEMA public TO PUBLIC;
    \q
    
    railway run --service backend alembic stamp base
    # Redeploy backend in Railway dashboard
    ```
+
+**Alternative: Complete Database Wipe** (if above doesn't work):
+```bash
+railway link
+# List all custom types first
+railway run --service postgres psql $DATABASE_URL -c "\dT"
+
+# Drop the entire database and recreate (CAUTION: deletes everything)
+railway run --service postgres psql -c "SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = current_database() AND pid <> pg_backend_pid();"
+railway run --service postgres psql -c "DROP DATABASE IF EXISTS railway;"
+railway run --service postgres psql -c "CREATE DATABASE railway;"
+
+# Redeploy backend in Railway dashboard
+```
 
 **Technical Details**: In async migrations wrapped by `connection.run_sync()`, the `checkfirst` parameter on enum `.create()` doesn't reliably check for existing types with asyncpg. The fix uses PostgreSQL's `DO $$ ... EXCEPTION WHEN duplicate_object` pattern which works correctly in all contexts.
 
