@@ -67,12 +67,12 @@ def upgrade() -> None:
 
 def downgrade() -> None:
     op.drop_index("ix_forum_replies_created_at", table_name="forum_replies")
-    op.drop_index("ixif no other tables use it
-    op.execute("DROP TYPE IF EXISTS moderation_status_enum"
+    op.drop_index("ix_forum_replies_post_id", table_name="forum_replies")
+    op.drop_table("forum_replies")
 
     op.drop_index("ix_forum_posts_patient_fhir_id", table_name="forum_posts")
     op.drop_index("ix_forum_posts_created_at", table_name="forum_posts")
     op.drop_table("forum_posts")
 
-    # Drop enum type (PostgreSQL-specific)
-    sa.Enum(name="moderation_status_enum").drop(op.get_bind(), checkfirst=True)
+    # Drop enum type if no other tables use it
+    op.execute("DROP TYPE IF EXISTS moderation_status_enum")
