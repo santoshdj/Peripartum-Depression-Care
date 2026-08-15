@@ -1,11 +1,21 @@
 import logging
 import re
+import sys
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession
 from sqlalchemy.orm import DeclarativeBase
 
 from app.utils.config import settings
 
+# Configure logging early (before any log calls)
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    stream=sys.stdout,
+    force=True  # Override any existing config
+)
+
 logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)  # Ensure this logger is at INFO level
 
 
 def mask_db_password(url: str) -> str:

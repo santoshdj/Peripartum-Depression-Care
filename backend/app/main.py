@@ -1,5 +1,6 @@
 from contextlib import asynccontextmanager
 import logging
+import sys
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -16,8 +17,11 @@ from app.models import user  # noqa: F401 — ensures users table registered
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    stream=sys.stdout,
+    force=True  # Override any existing config to ensure consistency
 )
 logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
 
 
 @asynccontextmanager

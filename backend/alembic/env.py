@@ -1,6 +1,7 @@
 import asyncio
 import logging
 import re
+import sys
 from logging.config import fileConfig
 
 from alembic import context
@@ -13,7 +14,16 @@ from app.database import Base
 from app.models import AuthState, Session, EpdsCache, LlmAuditLog  # noqa: F401
 from app.utils.config import settings
 
+# Ensure logging is configured before we log anything
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    stream=sys.stdout,
+    force=True
+)
+
 logger = logging.getLogger('alembic.env')
+logger.setLevel(logging.INFO)
 
 
 def mask_db_password(url: str) -> str:
