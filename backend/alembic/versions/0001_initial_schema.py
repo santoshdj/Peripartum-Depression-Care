@@ -34,7 +34,7 @@ def upgrade() -> None:
     op.create_table(
         "epds_cache",
         sa.Column("id", sa.Integer, primary_key=True, autoincrement=True),
-        sa.Column("fhir_patient_id", sa.String(256), nullable=False, index=True),
+        sa.Column("fhir_patient_id", sa.String(256), nullable=False),
         sa.Column("score", sa.Integer, nullable=False),
         sa.Column("fhir_observation_id", sa.String(256), nullable=True),
         sa.Column("fhir_questionnaire_response_id", sa.String(256), nullable=True),
