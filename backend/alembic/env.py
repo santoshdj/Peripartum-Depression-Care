@@ -13,8 +13,9 @@ from app.utils.config import settings
 
 config = context.config
 
-# Override the ini URL with the sync version (Alembic needs psycopg2, not asyncpg)
-config.set_main_option("sqlalchemy.url", settings.database_url_sync)
+# Override the ini URL with the asyncpg version for async migrations
+# Alembic runs async migrations, so it needs the asyncpg driver (not psycopg2)
+config.set_main_option("sqlalchemy.url", settings.DATABASE_URL)
 
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)

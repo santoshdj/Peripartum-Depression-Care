@@ -129,13 +129,5 @@ class Settings(BaseSettings):
             return None
         return v
 
-    @property
-    def database_url_sync(self) -> str:
-        """
-        Sync version of DATABASE_URL for Alembic migrations.
-        Converts postgresql+asyncpg:// to postgresql+psycopg2://
-        """
-        return self.DATABASE_URL.replace("postgresql+asyncpg://", "postgresql+psycopg2://", 1)
-
 
 settings = Settings()
