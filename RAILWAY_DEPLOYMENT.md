@@ -259,6 +259,38 @@ In Railway dashboard:
 
 **Technical Details**: The original migration had both `sa.Column("fhir_patient_id", ..., index=True)` (auto-creates index) and `op.create_index("ix_epds_cache_fhir_patient_id", ...)` (explicit index creation), causing a duplicate. The fix removes `index=True` from the column definition since we use explicit index creation.
 
+#### DuplicateObjectError: type already exists
+
+**Symptom**: Alembic fails with `type "moderation_status_enum" already exists` or similar enum/type duplicate errors.
+
+**Root Cause**: Fixed in commit cf3a3c7. The migration used `checkfirst=True` with SQLAlchemy's `.create()` method, but this doesn't work reliably in async migration contexts with asyncpg.
+
+**Solution**: The bug is now fixed. The migration now uses PostgreSQL's native `CREATE TYPE ... IF NOT EXISTS` syntax via raw SQL, which works correctly in async contexts.
+
+If you still get this error after the fix:
+
+1. **Pull latest code**:
+   ```bash
+   git pull origin master
+   ```
+
+2. **Railway will auto-redeploy**. If needed, manually redeploy in Railway dashboard.
+
+3. **If error persists**, reset the database:
+   ```bash
+   railway link
+   railway run --service postgres psql $DATABASE_URL
+   # In psql:
+   DROP SCHEMA public CASCADE;
+   CREATE SCHEMA public;
+   \q
+   
+   railway run --service backend alembic stamp base
+   # Redeploy backend in Railway dashboard
+   ```
+
+**Technical Details**: In async migrations wrapped by `connection.run_sync()`, the `checkfirst` parameter on enum `.create()` doesn't reliably check for existing types with asyncpg. The fix uses PostgreSQL's `DO $$ ... EXCEPTION WHEN duplicate_object` pattern which works correctly in all contexts.
+
 #### Authentication Redirect Errors
 
 **Symptom**: EHR authentication fails with redirect URI mismatch.
