@@ -231,24 +231,56 @@ In Railway dashboard:
 
 **Root Cause**: The app previously used `Base.metadata.create_all()` which created tables without Alembic tracking. When Alembic migrations run, they try to create tables that already exist.
 
-**Solution (Choose One)**:
+**Solutions (Try in order)**:
 
-**Option 1: Fresh Database (Recommended for new deployments)**
-1. In Railway dashboard → Postgres service → **Settings** → **Delete Service**
-2. Create a new Postgres service: Click "+ New" → "Database" → "Add PostgreSQL"
-3. Redeploy the backend service (migrations will run on fresh database)
+**Step 1: Verify New Postgres Service**
 
-**Option 2: Fix Existing Database**
-1. Connect to Railway database via CLI:
-   ```bash
-   railway link
-   railway run --service postgres psql $DATABASE_URL
-   ```
-2. Mark all migrations as applied without running them:
-   ```bash
-   railway run --service backend alembic stamp head
-   ```
-3. Redeploy backend service
+If you deleted and recreated Postgres but still get the error:
+
+1. Railway dashboard → Postgres service → **Info** tab
+2. Check **Created** date - should be recent (today)
+3. If date is old, the service wasn't actually deleted - try deleting again
+4. After creating new Postgres, verify backend's `DATABASE_URL` updated:
+   - Backend service → **Variables** → check `DATABASE_URL` value
+   - Should match the new Postgres connection string
+
+**Step 2: Manual Database Reset (Most Reliable)**
+
+If Step 1 doesn't help, manually clean the database:
+
+```bash
+# Link to your Railway project
+railway link
+
+# Connect to Postgres and drop all tables
+railway run --service postgres psql $DATABASE_URL
+
+# In psql prompt:
+DROP SCHEMA public CASCADE;
+CREATE SCHEMA public;
+\q
+
+# Mark migrations as ready to run
+railway run --service backend alembic stamp base
+
+# Trigger backend redeploy
+# Go to Railway dashboard → backend service → click "Redeploy"
+```
+
+**Step 3: Fix Without Dropping Tables**
+
+If you can't drop tables (have production data):
+
+```bash
+# Link to your Railway project
+railway link
+
+# Mark all migrations as already applied (skip running them)
+railway run --service backend alembic stamp head
+
+# Trigger backend redeploy
+# Go to Railway dashboard → backend service → click "Redeploy"
+```
 
 **Prevention**: The app now uses Alembic exclusively (no `create_all()` calls in production).
 
