@@ -203,6 +203,49 @@ In Railway dashboard:
 2. Verify `DATABASE_URL` is set (should be auto-injected by Postgres plugin)
 3. Ensure Alembic migrations ran successfully (check logs for "alembic upgrade head")
 
+#### Database Connection Failed / InvalidPasswordError
+
+**Symptom**: Backend crashes with `asyncpg.exceptions.InvalidPasswordError: password authentication failed for user "postgres"` or similar connection errors.
+
+**Root Cause**: The `DATABASE_URL` environment variable is either missing or incorrect. Railway should auto-inject this when Postgres and backend are properly linked.
+
+**Solution**:
+
+1. **Verify Postgres → Backend Link** in Railway dashboard:
+   - Click on **Postgres service**
+   - Go to **Settings** → **Connect**
+   - Verify it shows the backend service in "Connected Services"
+   - If not, click **+ Add Service** → select your backend service
+
+2. **Check DATABASE_URL Variable**:
+   - Click on **backend service** → **Variables**
+   - Look for `DATABASE_URL` (should be auto-injected by Railway)
+   - If missing, the services aren't linked (go back to step 1)
+   - If present, copy the value and verify it starts with `postgres://` or `postgresql://`
+
+3. **Manual Link** (if auto-link doesn't work):
+   - Backend service → **Variables** → **+ New Variable**
+   - Variable name: `DATABASE_URL`
+   - Variable value: Click **"Add Reference"** → Select **Postgres** → **DATABASE_URL**
+   - Click **Add** → This creates a dynamic reference to the Postgres URL
+
+4. **Verify Connection String Format**:
+   - The app expects: `postgres://user:password@host:port/dbname` or `postgresql://...`
+   - Railway auto-converts this to `postgresql+asyncpg://...` via the config validator
+   - If using a custom DATABASE_URL, ensure it includes the password
+
+5. **Redeploy** after fixing:
+   - Backend service → **Deployments** → **Redeploy**
+
+**Quick Check via CLI**:
+```bash
+railway link
+railway run --service backend env | grep DATABASE_URL
+# Should show: DATABASE_URL=postgres://postgres:****@postgres.railway.internal:5432/railway
+```
+
+If `DATABASE_URL` is empty or missing, the Postgres and backend services are not properly connected.
+
 #### Frontend Can't Reach Backend
 
 **Symptom**: Frontend shows connection errors or "Failed to fetch".
