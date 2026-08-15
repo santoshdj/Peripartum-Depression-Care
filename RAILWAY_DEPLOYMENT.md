@@ -187,7 +187,9 @@ PROVIDER_CONFIGS = {
 In Railway dashboard:
 - Click on a service → **Deployments** → Click on active deployment → **View Logs**
 
-**Database Connection Logs**: The backend now logs detailed database connection info on startup:
+**Important**: All application logs are written to `stdout` at `INFO` level. Railway automatically captures stdout from your containers.
+
+**Database Connection Logs**: The backend logs detailed database connection info on startup (in `INFO` level):
 ```
 === Database Configuration ===
 DATABASE_URL (masked): postgresql+asyncpg://postgres:****@postgres.railway.internal:5432/railway
