@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+const API_BASE = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8000";
 
 const EHR_PROVIDERS = [
   { value: "epic", label: "Epic (MyChart)" },
