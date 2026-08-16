@@ -15,5 +15,6 @@ COPY . .
 EXPOSE 8000
 
 # Start the FastAPI server (migrations handled by separate service)
-CMD ["uv", "run", "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+# Railway assigns a PORT env var - use it or default to 8000 for local dev
+CMD sh -c "uv run uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}"
 
