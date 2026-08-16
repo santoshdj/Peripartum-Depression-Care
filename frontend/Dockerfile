@@ -25,11 +25,12 @@ ENV NODE_ENV=production
 
 # Copy necessary files from builder
 COPY --from=builder /app/next.config.mjs ./
-COPY --from=builder /app/public ./public
+COPY --from=builder /app/package.json ./package.json
 COPY --from=builder /app/.next/standalone ./
 COPY --from=builder /app/.next/static ./.next/static
 
 EXPOSE 3000
 
-# Railway injects $PORT at runtime; fall back to 3000 for local dev
-CMD ["sh", "-c", "node server.js"]
+# Railway injects $PORT at runtime; Next.js standalone respects PORT env var
+ENV PORT=3000
+CMD ["node", "server.js"]
