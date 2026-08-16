@@ -15,6 +15,15 @@ depends_on = None
 
 
 def upgrade() -> None:
+    # Check if migration already ran (defensive check for split-brain scenario)
+    conn = op.get_bind()
+    inspector = sa.inspect(conn)
+    existing_tables = inspector.get_table_names()
+    
+    if "forum_posts" in existing_tables and "forum_replies" in existing_tables:
+        # Tables already exist, skip migration
+        return
+    
     # Create the enum type only if it doesn't exist (idempotent check)
     # Check first to avoid exception handling issues with asyncpg
     op.execute("""
