@@ -12,5 +12,10 @@ RUN uv sync --frozen --no-dev
 # Copy application code (needed for models in migrations)
 COPY backend/ .
 
+# Debug: Show migration file contents after copy
+RUN echo "=== Contents of 0004_add_forum_tables.py ===" && \
+    cat alembic/versions/0004_add_forum_tables.py && \
+    echo "=== End of file ==="
+
 # Run migrations and exit
 CMD ["uv", "run", "alembic", "upgrade", "head"]
