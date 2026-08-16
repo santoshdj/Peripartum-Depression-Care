@@ -15,22 +15,24 @@ This service is configured via `railway.toml`:
 ```toml
 [build]
 builder = "DOCKERFILE"
-dockerfilePath = "Dockerfile"
+dockerfilePath = "migrations/Dockerfile"
 
 [deploy]
 restartPolicyType = "NEVER"
 numReplicas = 1
 ```
 
+**Important:** The build context is the project root (not `migrations/`), so the Dockerfile references `backend/` directory.
+
 ## Setup in Railway Dashboard
 
 1. **Create New Service**: Railway Dashboard → + New → Empty Service
 2. **Name**: `backend-migrations`
 3. **Connect Repo**: Settings → Source → Connect GitHub repo
-4. **Root Directory**: `migrations`
+4. **Root Directory**: Leave empty or set to `.` (project root)
 5. **Environment Variables**: Add `DATABASE_URL` (reference from Postgres service)
 
-Railway will automatically detect and use the `railway.toml` configuration.
+Railway will automatically detect and use the `migrations/railway.toml` configuration.
 
 ## Manual Deployment
 

@@ -1,5 +1,7 @@
 # Migration Service Setup for Railway
 
+> **Note:** The migration service has moved to a dedicated directory. See [../migrations/README.md](../migrations/README.md) for the current setup instructions.
+
 This guide explains how to run database migrations as a separate one-time job before the backend service starts.
 
 ## Architecture
@@ -23,18 +25,20 @@ Migration Service (runs once) → Backend Service (starts after migrations compl
 1. **Railway Dashboard** → Your Project → **+ New** → **Empty Service**
 2. Name it: `backend-migrations`
 3. **Settings** → **Source** → **Connect Repo** → Select your GitHub repo
-4. **Settings** → **Root Directory**: `backend`
-5. **Settings** → **Builder** → **Dockerfile Path**: `Dockerfile.migrate`
+4. **Settings** → **Root Directory**: Leave empty or set to `.` (project root)
+
+The service will automatically detect and use `migrations/railway.toml` which configures:
+- Dockerfile path: `migrations/Dockerfile`
+- Restart policy: NEVER (one-time job)
+- Single replica
 
 ### 2. Configure Migration Service
-
-**Settings → Deploy:**
-- **Restart Policy**: `Never` (one-time job, doesn't restart)
-- **Replicas**: `1` (migrations must run sequentially)
 
 **Settings → Variables:**
 - Add variable: `DATABASE_URL`
 - Click **Add Reference** → Select **Postgres** → **DATABASE_URL**
+
+**Note:** Restart policy and replicas are automatically configured via `migrations/railway.toml`
 
 ### 3. Configure Backend Service Dependency
 
