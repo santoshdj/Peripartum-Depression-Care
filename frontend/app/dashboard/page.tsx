@@ -92,10 +92,10 @@ export default function DashboardPage() {
       {/* Risk alert */}
       {data.risk_alert && (
         <RiskAlert message={data.risk_alert.message} score={data.risk_alert.score} />
-      )}Care plan suggestions (only shown if EPDS >= 10) */}
+      )}
+      
+      {/* Care plan suggestions (only shown if EPDS >= 10) */}
       <CarePlanSuggestions />
-
-      {/* 
 
       {/* AI summary */}
       <NarrativeSummary summary={data.narrative_summary} />
