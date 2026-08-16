@@ -17,5 +17,20 @@ EXPOSE 8000
 
 # Use PostgreSQL advisory lock to prevent race conditions when multiple containers start simultaneously
 # Advisory lock ensures only one container runs migrations at a time
-CMD ["sh", "-c", "psql $DATABASE_URL -c 'SELECT pg_advisory_lock(123456789);' && uv run alembic upgrade head; MIGRATION_EXIT=$?; psql $DATABASE_URL -c 'SELECT pg_advisory_unlock(123456789);'; if [ $MIGRATION_EXIT -ne 0 ]; then exit $MIGRATION_EXIT; fi && uv run uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}"]
+# Convert DATABASE_URL to psql-compatible format (postgres:// not postgresql://)
+CMD ["sh", "-c", "\
+    PSQL_URL=$(echo $DATABASE_URL | sed 's/^postgresql:/postgres:/') && \
+    echo 'Acquiring migration lock...' && \
+    psql \"$PSQL_URL\" -c 'SELECT pg_advisory_lock(123456789);' && \
+    echo 'Running migrations...' && \
+    uv run alembic upgrade head; \
+    MIGRATION_EXIT=$?; \
+    echo 'Releasing migration lock...' && \
+    psql \"$PSQL_URL\" -c 'SELECT pg_advisory_unlock(123456789);'; \
+    if [ $MIGRATION_EXIT -ne 0 ]; then \
+        echo 'Migration failed, exiting...'; \
+        exit $MIGRATION_EXIT; \
+    fi && \
+    echo 'Migrations successful, starting server...' && \
+    uv run uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}"]
 
