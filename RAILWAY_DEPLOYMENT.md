@@ -2,6 +2,8 @@
 
 This guide walks you through deploying MathruMaitri (Peripartum Depression Care Platform) to Railway using our automated deployment scripts.
 
+**Note:** This guide uses the simplified approach where the backend service starts the server immediately. Database migrations are handled by a separate migration service. See [backend/MIGRATION_SERVICE.md](backend/MIGRATION_SERVICE.md) for setup instructions.
+
 ## Prerequisites
 
 Before you begin, make sure you have:
@@ -21,8 +23,9 @@ Before you begin, make sure you have:
 
 ## Architecture
 
-Railway deployment consists of three services:
+Railway deployment consists of four services:
 - **Postgres**: Database (managed by Railway)
+- **Backend Migrations**: One-time job to run Alembic migrations (see [backend/MIGRATION_SERVICE.md](backend/MIGRATION_SERVICE.md))
 - **Backend**: FastAPI + Python 3.12 (Docker build from `backend/`)
 - **Frontend**: Next.js 14 (Docker build from `frontend/`)
 

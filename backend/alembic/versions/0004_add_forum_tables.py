@@ -17,14 +17,14 @@ depends_on = None
 def upgrade() -> None:
     # Create the enum type only if it doesn't exist (idempotent check)
     # Check first to avoid exception handling issues with asyncpg
-    op.execute("""
-        DO $$ 
-        BEGIN
-            IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'moderation_status_enum') THEN
-                CREATE TYPE moderation_status_enum AS ENUM ('pending', 'approved', 'rejected', 'flagged');
-            END IF;
-        END $$;
-    """)
+    # op.execute("""
+    #     DO $$ 
+    #     BEGIN
+    #         IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'moderation_status_enum') THEN
+    #             CREATE TYPE moderation_status_enum AS ENUM ('pending', 'approved', 'rejected', 'flagged');
+    #         END IF;
+    #     END $$;
+    # """)
     
     moderation_status_enum = sa.Enum("pending", "approved", "rejected", "flagged", name="moderation_status_enum", create_type=False)
     
