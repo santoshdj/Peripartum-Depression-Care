@@ -2,7 +2,7 @@ import uuid
 from datetime import datetime, timezone
 from enum import Enum
 
-from sqlalchemy import String, Text, DateTime, ForeignKey, Enum as SQLEnum
+from sqlalchemy import String, Text, DateTime, ForeignKey
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database import Base
@@ -33,7 +33,7 @@ class ForumPost(Base):
     pseudonym: Mapped[str] = mapped_column(String(50), nullable=False)
     post_content: Mapped[str] = mapped_column(Text, nullable=False)
     moderation_status: Mapped[ModerationStatus] = mapped_column(
-        SQLEnum(ModerationStatus, name="moderation_status_enum"),
+        String(20),
         nullable=False,
         default=ModerationStatus.APPROVED,
     )
@@ -66,7 +66,7 @@ class ForumReply(Base):
     pseudonym: Mapped[str] = mapped_column(String(50), nullable=False)
     reply_content: Mapped[str] = mapped_column(Text, nullable=False)
     moderation_status: Mapped[ModerationStatus] = mapped_column(
-        SQLEnum(ModerationStatus, name="moderation_status_enum"),
+        String(20),
         nullable=False,
         default=ModerationStatus.APPROVED,
     )
