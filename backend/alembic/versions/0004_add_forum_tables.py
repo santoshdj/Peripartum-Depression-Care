@@ -15,25 +15,26 @@ depends_on = None
 
 
 def upgrade() -> None:
-    # Check if migration already ran (defensive check for split-brain scenario)
+    # Get connection for queries
     conn = op.get_bind()
     inspector = sa.inspect(conn)
     existing_tables = inspector.get_table_names()
     
+    # Check if migration already ran (defensive check for split-brain scenario)
     if "forum_posts" in existing_tables and "forum_replies" in existing_tables:
         # Tables already exist, skip migration
         return
     
-    # Create the enum type only if it doesn't exist (idempotent check)
-    # Check first to avoid exception handling issues with asyncpg
-    op.execute("""
-        DO $$ 
-        BEGIN
-            IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'moderation_status_enum') THEN
-                CREATE TYPE moderation_status_enum AS ENUM ('pending', 'approved', 'rejected', 'flagged');
-            END IF;
-        END $$;
-    """)
+    # Check if enum type exists by querying pg_type
+    # Avoid DO block with IF NOT EXISTS - query first in Python instead
+    result = conn.execute(sa.text(
+        "SELECT 1 FROM pg_type WHERE typname = 'moderation_status_enum'"
+    ))
+    enum_exists = result.scalar() is not None
+    
+    if not enum_exists:
+        # Only execute CREATE TYPE if enum doesn't exist
+        op.execute("CREATE TYPE moderation_status_enum AS ENUM ('pending', 'approved', 'rejected', 'flagged')")
     
     moderation_status_enum = sa.Enum("pending", "approved", "rejected", "flagged", name="moderation_status_enum", create_type=False)
     
