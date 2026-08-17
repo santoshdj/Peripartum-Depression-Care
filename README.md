@@ -4,7 +4,6 @@
 
 A patient-facing **SMART on FHIR standalone app** for peripartum depression screening, monitoring, peer support, and care coordination — **compatible with any FHIR R4-compliant EHR** (Epic, Cerner, Allscripts, athenahealth, and more).
 Patients log in with their existing EHR credentials (MyChart, Patient Portal, etc.), complete validated EPDS screenings that write back to their clinical record, share diary entries with their care team, connect with other mothers anonymously, and receive AI-generated care plan guidance.
-
 _Formerly: Peripartum Depression Care Platform (internal technical name)_
 
 > **Multi-Provider Support:** Works with any FHIR R4-compliant EHR. See [docs/EHR_PROVIDER_SETUP.md](docs/EHR_PROVIDER_SETUP.md) for provider-specific configuration.
