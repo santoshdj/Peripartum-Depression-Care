@@ -1,7 +1,7 @@
 from datetime import datetime, timedelta, timezone
 import logging
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from fastapi.responses import RedirectResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -128,4 +128,17 @@ async def me(current_session: Session = Depends(get_current_session)):
     return {
         "patient_id": current_session.fhir_patient_id,
         "expires_at": current_session.expires_at.isoformat(),
+    }
+
+
+@router.get("/debug-cookies")
+async def debug_cookies(request: Request):
+    """Debug endpoint to check what cookies the backend is receiving."""
+    logger.info("=== Debug Cookies Endpoint ===")
+    logger.info(f"All cookies: {request.cookies}")
+    logger.info(f"Headers: {dict(request.headers)}")
+    return {
+        "cookies": request.cookies,
+        "cookie_header": request.headers.get("cookie"),
+        "session_cookie_name": settings.SESSION_COOKIE_NAME,
     }

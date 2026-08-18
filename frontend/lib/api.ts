@@ -232,6 +232,13 @@ export interface ForumReplyCreate {
 const API_BASE = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8000";
 
 async function apiFetch<T>(path: string, options?: RequestInit): Promise<T> {
+  // Debug: Log cookies before request
+  if (typeof window !== "undefined") {
+    console.log(`[API] Making request to: ${API_BASE}${path}`);
+    console.log(`[API] document.cookie:`, document.cookie);
+    console.log(`[API] credentials: include`);
+  }
+
   const response = await fetch(`${API_BASE}${path}`, {
     credentials: "include",
     headers: {
@@ -241,9 +248,16 @@ async function apiFetch<T>(path: string, options?: RequestInit): Promise<T> {
     ...options,
   });
 
+  // Debug: Log response headers
+  if (typeof window !== "undefined") {
+    console.log(`[API] Response status:`, response.status);
+    console.log(`[API] Response headers Set-Cookie:`, response.headers.get("set-cookie"));
+  }
+
   if (response.status === 401) {
     // Redirect to login on session expiry
     if (typeof window !== "undefined") {
+      console.error(`[API] 401 Unauthorized - redirecting to login`);
       window.location.href = "/";
     }
     throw new Error("Not authenticated");
