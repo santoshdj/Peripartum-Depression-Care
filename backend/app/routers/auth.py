@@ -59,6 +59,7 @@ async def callback(
     )
     db.add(session)
     await db.flush()
+    await db.commit()
 
     response = RedirectResponse(url=f"{settings.FRONTEND_URL}/dashboard")
     response.set_cookie(
@@ -79,6 +80,7 @@ async def logout(
 ):
     """Destroys the session and clears the cookie."""
     await db.delete(current_session)
+    await db.commit()
     response = RedirectResponse(url=settings.FRONTEND_URL, status_code=302)
     response.delete_cookie(settings.SESSION_COOKIE_NAME)
     return response
