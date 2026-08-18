@@ -243,9 +243,9 @@ async function apiFetch<T>(path: string, options?: RequestInit): Promise<T> {
     console.log(`[API] credentials: include`);
   }
 
-  const headers: HeadersInit = {
+  const headers: Record<string, string> = {
     "Content-Type": "application/json",
-    ...options?.headers,
+    ...(options?.headers as Record<string, string> || {}),
   };
 
   // Add session token as header if available (fallback for cross-domain)
