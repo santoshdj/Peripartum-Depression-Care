@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { api, type DashboardResponse, type DiaryEntry } from "@/lib/api";
@@ -11,7 +11,7 @@ import { useGateContext } from "@/context/gate-context";
 import DailyCheckInCard from "@/components/DailyCheckInCard";
 import CarePlanSuggestions from "@/components/CarePlanSuggestions";
 
-export default function DashboardPage() {
+function DashboardContent() {
   const searchParams = useSearchParams();
   const [data, setData] = useState<DashboardResponse | null>(null);
   const [loading, setLoading] = useState(true);
@@ -207,5 +207,17 @@ export default function DashboardPage() {
       </div>
     </div>
     </GenderContextGate>
+  );
+}
+
+export default function DashboardPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex items-center justify-center min-h-[calc(100vh-4rem)]">
+        <p className="text-gray-400 animate-pulse">Loading...</p>
+      </div>
+    }>
+      <DashboardContent />
+    </Suspense>
   );
 }
