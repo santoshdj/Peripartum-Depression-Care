@@ -104,7 +104,7 @@ class Settings(BaseSettings):
     SESSION_EXPIRE_HOURS: int = 8
 
     # CORS
-    ALLOWED_ORIGINS: list[str] = ["http://localhost:3000"]
+    ALLOWED_ORIGINS: str | list[str] = ["http://localhost:3000"]
 
     @field_validator("ALLOWED_ORIGINS", mode="before")
     @classmethod
