@@ -106,6 +106,17 @@ class Settings(BaseSettings):
     # CORS
     ALLOWED_ORIGINS: list[str] = ["http://localhost:3000"]
 
+    @field_validator("ALLOWED_ORIGINS", mode="before")
+    @classmethod
+    def parse_allowed_origins(cls, v: str | list[str] | None) -> list[str]:
+        """Parse ALLOWED_ORIGINS from comma-separated string or list."""
+        if v is None:
+            return ["http://localhost:3000"]
+        if isinstance(v, str):
+            # Split by comma, strip whitespace, filter empty strings
+            return [origin.strip() for origin in v.split(",") if origin.strip()]
+        return v
+
     @field_validator("DATABASE_URL", mode="before")
     @classmethod
     def convert_postgres_url_to_asyncpg(cls, v: str | None) -> str:
