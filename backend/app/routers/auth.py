@@ -77,13 +77,17 @@ async def callback(
     await db.commit()
     logger.info("✓ Session committed to database")
 
+    # Use SameSite=none for cross-origin cookies in production (requires Secure=True)
+    # Use SameSite=lax for local development
+    samesite_value = "none" if settings.COOKIE_SECURE else "lax"
+
     # Log cookie configuration
     logger.info("=== Cookie Configuration ===")
     logger.info(f"Cookie name: {settings.SESSION_COOKIE_NAME}")
     logger.info(f"Session ID: {session.id}")
     logger.info(f"HttpOnly: True")
     logger.info(f"Secure: {settings.COOKIE_SECURE}")
-    logger.info(f"SameSite: lax")
+    logger.info(f"SameSite: {samesite_value}")
     logger.info(f"Max age: {expires_in} seconds")
     logger.info(f"Redirect URL: {settings.FRONTEND_URL}/dashboard")
     
@@ -97,7 +101,7 @@ async def callback(
         value=session.id,
         httponly=True,
         secure=settings.COOKIE_SECURE,
-        samesite="lax",
+        samesite=samesite_value,
         max_age=expires_in,
     )
     
