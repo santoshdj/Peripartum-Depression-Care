@@ -1,12 +1,20 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 const API_BASE = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8000";
 
 export default function DebugCookiesPage() {
   const [result, setResult] = useState<any>(null);
   const [loading, setLoading] = useState(false);
+  const [frontendCookies, setFrontendCookies] = useState<string>("");
+
+  useEffect(() => {
+    // Load cookies on client side only
+    if (typeof window !== "undefined") {
+      setFrontendCookies(document.cookie || "(no cookies)");
+    }
+  }, []);
 
   const testCookies = async () => {
     setLoading(true);
@@ -39,7 +47,7 @@ export default function DebugCookiesPage() {
       <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 mb-4">
         <h2 className="font-semibold mb-2">Frontend Cookies:</h2>
         <pre className="text-xs bg-white p-2 rounded overflow-x-auto">
-          {document.cookie || "(no cookies)"}
+          {frontendCookies}
         </pre>
       </div>
 
