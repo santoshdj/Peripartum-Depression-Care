@@ -1,4 +1,5 @@
 from datetime import datetime, timedelta, timezone
+import logging
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import RedirectResponse
@@ -11,6 +12,7 @@ from app.services.smart_auth import build_auth_url, exchange_code_for_token
 from app.utils.config import settings, get_provider_config
 
 router = APIRouter(prefix="/auth", tags=["auth"])
+logger = logging.getLogger(__name__)
 
 
 @router.get("/launch")
@@ -35,11 +37,17 @@ async def callback(
     db: AsyncSession = Depends(get_db),
 ):
     """Handles the OAuth2 redirect from the EHR, creates a session, sets HttpOnly cookie."""
+    logger.info("=== OAuth Callback Started ===")
+    logger.info(f"Code present: {bool(code)}, State present: {bool(state)}")
+    
     try:
         token_response = await exchange_code_for_token(code, state, db)
+        logger.info(f"✓ Token exchange successful. Response keys: {list(token_response.keys())}")
     except ValueError as exc:
+        logger.error(f"✗ Token exchange ValueError: {exc}")
         raise HTTPException(status_code=400, detail=str(exc))
     except Exception as exc:
+        logger.error(f"✗ Token exchange failed: {exc}", exc_info=True)
         raise HTTPException(status_code=502, detail=f"Token exchange failed: {exc}")
 
     patient_id = token_response.get("patient")
@@ -48,7 +56,12 @@ async def callback(
         token_response.get("expires_in", settings.SESSION_EXPIRE_HOURS * 3600)
     )
 
+    logger.info(f"Patient ID: {patient_id}")
+    logger.info(f"Access token present: {bool(access_token)}, length: {len(access_token) if access_token else 0}")
+    logger.info(f"Expires in: {expires_in} seconds")
+
     if not patient_id or not access_token:
+        logger.error("✗ Incomplete token response from EHR")
         raise HTTPException(status_code=502, detail="Incomplete token response from EHR")
 
     expires_at = datetime.now(timezone.utc) + timedelta(seconds=expires_in)
@@ -59,7 +72,24 @@ async def callback(
     )
     db.add(session)
     await db.flush()
+    logger.info(f"✓ Session created with ID: {session.id}")
+    
     await db.commit()
+    logger.info("✓ Session committed to database")
+
+    # Log cookie configuration
+    logger.info("=== Cookie Configuration ===")
+    logger.info(f"Cookie name: {settings.SESSION_COOKIE_NAME}")
+    logger.info(f"Session ID: {session.id}")
+    logger.info(f"HttpOnly: True")
+    logger.info(f"Secure: {settings.COOKIE_SECURE}")
+    logger.info(f"SameSite: lax")
+    logger.info(f"Max age: {expires_in} seconds")
+    logger.info(f"Redirect URL: {settings.FRONTEND_URL}/dashboard")
+    
+    # Log CORS/domain info
+    logger.info(f"ALLOWED_ORIGINS: {settings.ALLOWED_ORIGINS}")
+    logger.info(f"FRONTEND_URL: {settings.FRONTEND_URL}")
 
     response = RedirectResponse(url=f"{settings.FRONTEND_URL}/dashboard")
     response.set_cookie(
@@ -70,6 +100,8 @@ async def callback(
         samesite="lax",
         max_age=expires_in,
     )
+    
+    logger.info("=== OAuth Callback Complete - Redirecting to dashboard ===")
     return response
 
 
