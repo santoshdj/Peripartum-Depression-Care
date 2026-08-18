@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { api, type DashboardResponse, type DiaryEntry } from "@/lib/api";
 import NarrativeSummary from "@/components/NarrativeSummary";
@@ -11,6 +12,7 @@ import DailyCheckInCard from "@/components/DailyCheckInCard";
 import CarePlanSuggestions from "@/components/CarePlanSuggestions";
 
 export default function DashboardPage() {
+  const searchParams = useSearchParams();
   const [data, setData] = useState<DashboardResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -20,6 +22,16 @@ export default function DashboardPage() {
   const { setGateRequired } = useGateContext();
 
   useEffect(() => {
+    const sessionToken = searchParams.get("session_token");
+    
+    // If session token in URL, store it and clear URL
+    if (sessionToken) {
+      console.log("[Dashboard] Session token received from OAuth callback");
+      localStorage.setItem("session_token", sessionToken);
+      // Clean up URL without reloading
+      window.history.replaceState({}, "", "/dashboard");
+    }
+
     api.dashboard
       .get()
       .then((d) => {

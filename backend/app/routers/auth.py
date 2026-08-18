@@ -95,7 +95,12 @@ async def callback(
     logger.info(f"ALLOWED_ORIGINS: {settings.ALLOWED_ORIGINS}")
     logger.info(f"FRONTEND_URL: {settings.FRONTEND_URL}")
 
-    response = RedirectResponse(url=f"{settings.FRONTEND_URL}/dashboard")
+    # For cross-domain Railway deployments, pass session token in URL
+    # Frontend will use this to make authenticated requests
+    redirect_url = f"{settings.FRONTEND_URL}/dashboard?session_token={session.id}"
+    logger.info(f"Redirecting to: {redirect_url}")
+
+    response = RedirectResponse(url=redirect_url)
     response.set_cookie(
         key=settings.SESSION_COOKIE_NAME,
         value=session.id,

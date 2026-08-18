@@ -232,19 +232,30 @@ export interface ForumReplyCreate {
 const API_BASE = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8000";
 
 async function apiFetch<T>(path: string, options?: RequestInit): Promise<T> {
+  // Get session token from localStorage (for cross-domain Railway deployments)
+  const sessionToken = typeof window !== "undefined" ? localStorage.getItem("session_token") : null;
+
   // Debug: Log cookies before request
   if (typeof window !== "undefined") {
     console.log(`[API] Making request to: ${API_BASE}${path}`);
     console.log(`[API] document.cookie:`, document.cookie);
+    console.log(`[API] session_token from localStorage:`, sessionToken ? "present" : "none");
     console.log(`[API] credentials: include`);
+  }
+
+  const headers: HeadersInit = {
+    "Content-Type": "application/json",
+    ...options?.headers,
+  };
+
+  // Add session token as header if available (fallback for cross-domain)
+  if (sessionToken) {
+    headers["X-Session-Token"] = sessionToken;
   }
 
   const response = await fetch(`${API_BASE}${path}`, {
     credentials: "include",
-    headers: {
-      "Content-Type": "application/json",
-      ...options?.headers,
-    },
+    headers,
     ...options,
   });
 
